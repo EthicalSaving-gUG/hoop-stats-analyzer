@@ -1,0 +1,29 @@
+# Python Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# Test environments
+.pytest_cache/
+.coverage
+htmlcov/
+
+# User data
+uploads/
+results/
+tests/test_fast.mp4
+tests/test_slow.mp4
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# External Dependencies & Binaries
+*.pt
+node_modules/
+output_stats.json
