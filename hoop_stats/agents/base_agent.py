@@ -7,6 +7,7 @@ import time
 from abc import ABC, abstractmethod
 from ..game_state import GameState
 from ..stream_manager import StreamManager
+from ..whistle_detector import WhistleDetector
 
 
 class BaseAgent(threading.Thread, ABC):
@@ -19,19 +20,26 @@ class BaseAgent(threading.Thread, ABC):
     AGENT_NAME = "base"
 
     def __init__(self, game_state: GameState, stream_manager: StreamManager,
-                 camera_ids: list = None, tick_rate: float = 30.0):
+                 camera_ids: list = None, audio_ids: list = None,
+                 tick_rate: float = 30.0):
         super().__init__(daemon=True)
         self.game_state = game_state
         self.stream_manager = stream_manager
         self.camera_ids = camera_ids or []
-        self.tick_rate = tick_rate         # target FPS for processing
+        self.audio_ids = audio_ids or []
+        self.tick_rate = tick_rate
         self._running = False
-        self._active = True               # can be toggled from UI
+        self._active = True
+        self._whistle_detector = WhistleDetector()
 
     @abstractmethod
     def process_frame(self, camera_id: str, frame, frame_idx: int):
         """Process a single frame from one camera. Implement in subclass."""
         ...
+
+    def on_whistle(self):
+        """Called when a referee whistle is detected. Override in subclass."""
+        pass
 
     def on_start(self):
         """Optional hook called once when the agent starts."""
@@ -59,6 +67,15 @@ class BaseAgent(threading.Thread, ABC):
                         self.process_frame(cam_id, frame, idx)
                     except Exception as e:
                         print(f"[{self.AGENT_NAME}] Error processing {cam_id}: {e}")
+
+            # Check audio for whistles
+            for audio_id in self.audio_ids:
+                chunk = self.stream_manager.get_audio_chunk(audio_id)
+                if chunk is not None and self._whistle_detector.detect(chunk):
+                    try:
+                        self.on_whistle()
+                    except Exception as e:
+                        print(f"[{self.AGENT_NAME}] Error in on_whistle: {e}")
 
             time.sleep(dt)
 

@@ -43,8 +43,8 @@ class GameState:
         # ── Score ───────────────────────────────────────────────────────────
         self.score_home: int = 0
         self.score_away: int = 0
-        self.team_home_name: str = "Home"
-        self.team_away_name: str = "Away"
+        self.team_home_name: str = "Team Schwarz"
+        self.team_away_name: str = "Team Gelb"
 
         # ── Fouls (per quarter) ─────────────────────────────────────────────
         self.team_fouls_home: Dict[int, int] = {1: 0, 2: 0, 3: 0, 4: 0}

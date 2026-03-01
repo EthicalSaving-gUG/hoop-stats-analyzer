@@ -8,10 +8,20 @@ from .base_agent import BaseAgent
 class RefereeAgent(BaseAgent):
     AGENT_NAME = "referee"
 
-    def __init__(self, game_state, stream_manager, camera_ids=None, **kwargs):
-        super().__init__(game_state, stream_manager, camera_ids, tick_rate=5, **kwargs)
+    def __init__(self, game_state, stream_manager, camera_ids=None, audio_ids=None, **kwargs):
+        super().__init__(game_state, stream_manager, camera_ids, audio_ids, tick_rate=5, **kwargs)
         self._last_checked_event_count = 0
         self._alerted_violations = set()
+        self._whistle_count = 0
+
+    def on_whistle(self):
+        """Whistle detected → log referee whistle event."""
+        self._whistle_count += 1
+        self.game_state.append_event(
+            self.AGENT_NAME, "REFEREE_WHISTLE",
+            {"whistle_number": self._whistle_count,
+             "hint": "Mögliches Foul, Ausball oder Timeout"}
+        )
 
     def process_frame(self, camera_id, frame, frame_idx):
         gs = self.game_state

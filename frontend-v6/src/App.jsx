@@ -21,8 +21,8 @@ function App() {
     shot_clock: true, game_clock: true, scoresheet: true, referee: true
   });
   const [cameras, setCameras] = useState([{ id: 'cam1', source: '' }]);
-  const [teamHome, setTeamHome] = useState('');
-  const [teamAway, setTeamAway] = useState('');
+  const [teamHome, setTeamHome] = useState('Team Schwarz');
+  const [teamAway, setTeamAway] = useState('Team Gelb');
 
   // Poll for file analysis progress
   useEffect(() => {
@@ -96,8 +96,8 @@ function App() {
       await axios.post(`${API_BASE}/game/start`, {
         cameras: validCameras,
         agents: activeAgents,
-        team_home: teamHome || 'Home',
-        team_away: teamAway || 'Away',
+        team_home: teamHome || 'Team Schwarz',
+        team_away: teamAway || 'Team Gelb',
       });
       setAppState('LIVE');
     } catch (e) {
@@ -168,7 +168,7 @@ function App() {
               </div>
               <div>
                 <label className="text-sm text-slate-400 mb-1 block">Team Away</label>
-                <input value={teamAway} onChange={(e) => setTeamAway(e.target.value)} placeholder="z.B. Uffenheim"
+                <input value={teamAway} onChange={(e) => setTeamAway(e.target.value)} placeholder="z.B. Team Gelb"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none" />
               </div>
             </div>

@@ -11,8 +11,8 @@ from ..detector import HoopDetector
 class ShotClockAgent(BaseAgent):
     AGENT_NAME = "shot_clock"
 
-    def __init__(self, game_state, stream_manager, camera_ids=None, **kwargs):
-        super().__init__(game_state, stream_manager, camera_ids, tick_rate=10, **kwargs)
+    def __init__(self, game_state, stream_manager, camera_ids=None, audio_ids=None, **kwargs):
+        super().__init__(game_state, stream_manager, camera_ids, audio_ids, tick_rate=10, **kwargs)
         self._detector = None
         self._last_tick = None
         self._last_ball_x = None

@@ -101,9 +101,14 @@ async def start_game(config: dict):
     STREAM_MGR = StreamManager()
     cameras = config.get("cameras", [])
     camera_ids = []
+    audio_ids = []
     for cam in cameras:
         STREAM_MGR.add_camera(cam["id"], cam["source"])
         camera_ids.append(cam["id"])
+        # Also extract audio from each video source for whistle detection
+        audio_id = f"audio_{cam['id']}"
+        STREAM_MGR.add_audio(audio_id, cam["source"])
+        audio_ids.append(audio_id)
     STREAM_MGR.start_all()
 
     AGENTS = {}
@@ -111,7 +116,7 @@ async def start_game(config: dict):
     for agent_name in requested_agents:
         cls = AGENT_CLASSES.get(agent_name)
         if cls:
-            agent = cls(GAME_STATE, STREAM_MGR, camera_ids=camera_ids)
+            agent = cls(GAME_STATE, STREAM_MGR, camera_ids=camera_ids, audio_ids=audio_ids)
             agent.start()
             AGENTS[agent_name] = agent
 
@@ -158,4 +163,4 @@ async def analyze_stream(url: str = Form(...)):
     return {"status": "processing", "message": "Stream analysis started", "url": url}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning", access_log=False)

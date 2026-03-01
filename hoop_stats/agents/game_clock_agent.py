@@ -11,8 +11,8 @@ from ..detector import HoopDetector
 class GameClockAgent(BaseAgent):
     AGENT_NAME = "game_clock"
 
-    def __init__(self, game_state, stream_manager, camera_ids=None, **kwargs):
-        super().__init__(game_state, stream_manager, camera_ids, tick_rate=5, **kwargs)
+    def __init__(self, game_state, stream_manager, camera_ids=None, audio_ids=None, **kwargs):
+        super().__init__(game_state, stream_manager, camera_ids, audio_ids, tick_rate=5, **kwargs)
         self._detector = None
         self._last_tick = None
         self._no_movement_frames = 0
@@ -24,6 +24,16 @@ class GameClockAgent(BaseAgent):
         self._last_tick = time.time()
         # Start game clock on agent start
         self.game_state.game_clock_running = True
+
+    def on_whistle(self):
+        """Whistle detected → stop clocks (dead ball)."""
+        if self.game_state.game_clock_running:
+            self.game_state.game_clock_running = False
+            self.game_state.shot_clock_running = False
+            self.game_state.append_event(
+                self.AGENT_NAME, "WHISTLE_DETECTED",
+                {"action": "clocks_stopped"}
+            )
 
     def process_frame(self, camera_id, frame, frame_idx):
         import cv2
