@@ -61,6 +61,8 @@ class GameState:
 
         # ── Player / Pose Stats ─────────────────────────────────────────────
         self.player_fouls: Dict[str, int] = {}   # player_id -> fouls
+        self.active_players: set = set()         # Set of player IDs currently on court
+        self.substitution_window_open_until: float = 0.0  # Timestamp when window closes
         self.player_stats: Dict[str, Any] = {
             "biomechanics_live": {
                 "elbow_angle": 0.0,
@@ -76,6 +78,12 @@ class GameState:
     def append_event(self, agent: str, event_type: str,
                      data: dict = None, frame_ref: int = None):
         with self._lock:
+            # Check for referee substitution signal to open the 15-second window
+            if agent == "referee_signals" and event_type == "REFEREE_SIGNAL":
+                signal = (data or {}).get("signal", "")
+                if "Substitution" in signal:
+                    self.substitution_window_open_until = time.time() + 15.0
+
             evt = GameEvent(
                 timestamp=time.time(),
                 agent=agent,
@@ -85,6 +93,13 @@ class GameState:
             )
             self.events.append(evt)
             return evt
+
+    @property
+    def is_substitution_window_open(self) -> bool:
+        """Returns True if a referee authorized a substitution within the last 15 seconds."""
+        # Also, substitutions are implicitly allowed during timeouts and between quarters,
+        # but for this specific Phase 8 request, we use the explicit timer window.
+        return time.time() < self.substitution_window_open_until
 
     def add_score(self, team: str, points: int, scorer_id: str = None):
         with self._lock:

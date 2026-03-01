@@ -61,24 +61,29 @@ class ScoresheetAgent(BaseAgent):
                         "fg_made": 0,
                         "fg_att": 0,
                     }
+        # Update GameState active players
+        self.game_state.active_players = current_players
 
         # Track substitutions
         new_in = current_players - self._known_players
         new_out = self._known_players - current_players
 
-        for pid in new_in:
-            if self._known_players:  # Skip initial detection
+        # Phase 8: Official Substitutions.
+        # Only log these if the referee authorized a substitution recently.
+        # Otherwise, we just silently update _known_players to fix tracking flickering.
+        if self._known_players and self.game_state.is_substitution_window_open:
+            for pid in new_in:
                 self.game_state.append_event(
-                    self.AGENT_NAME, "SUBSTITUTION_IN",
+                    self.AGENT_NAME, "OFFICIAL_SUB_IN",
                     {"player_id": pid}, frame_idx
                 )
 
-        for pid in new_out:
-            if len(new_out) < 3:  # avoid false triggers from camera glitches
-                self.game_state.append_event(
-                    self.AGENT_NAME, "SUBSTITUTION_OUT",
-                    {"player_id": pid}, frame_idx
-                )
+            for pid in new_out:
+                if len(new_out) < 3:  # avoid false triggers from camera glitches
+                    self.game_state.append_event(
+                        self.AGENT_NAME, "OFFICIAL_SUB_OUT",
+                        {"player_id": pid}, frame_idx
+                    )
 
         self._known_players = current_players
 
