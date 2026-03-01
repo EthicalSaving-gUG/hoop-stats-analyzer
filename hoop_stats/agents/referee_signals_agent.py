@@ -73,8 +73,9 @@ class RefereeSignalsAgent(BaseAgent):
             
         # Analyze the primary detected person (assumed to be the referee if isolated)
         landmarks = detection_result.pose_landmarks[0]
+        ruleset = self.game_state.rules.name.lower()
         
-        detected_gesture = self._classify_referee_gesture(landmarks)
+        detected_gesture = self._classify_referee_gesture(landmarks, ruleset)
         
         if detected_gesture:
             if self._current_gesture == detected_gesture:
@@ -92,7 +93,7 @@ class RefereeSignalsAgent(BaseAgent):
             self._current_gesture = None
 
     def _trigger_event(self, gesture: str, frame_idx: int):
-        print(f"[{self.AGENT_NAME}] Recognized FIBA Signal: {gesture}")
+        print(f"[{self.AGENT_NAME}] Recognized Signal: {gesture}")
         self.game_state.append_event(
             self.AGENT_NAME, "REFEREE_SIGNAL",
             {
@@ -102,20 +103,18 @@ class RefereeSignalsAgent(BaseAgent):
             frame_idx
         )
 
-    def _classify_referee_gesture(self, marks) -> str:
+    def _classify_referee_gesture(self, marks, ruleset: str) -> str:
         """
-        Evaluate heuristics for FIBA hand signals using 3D coordinates.
+        Evaluate heuristics for FIBA/NBA hand signals using 3D coordinates.
         Note: Origin (0,0) is top-left. Y increases downwards.
         """
-        
-        # 11: l_shoulder, 12: r_shoulder
-        # 13: l_elbow,    14: r_elbow
-        # 15: l_wrist,    16: r_wrist
+        nose = marks[0]
         ls, rs = marks[11], marks[12]
         le, re = marks[13], marks[14]
         lw, rw = marks[15], marks[16]
+        lh, rh = marks[23], marks[24]
 
-        # Basic presence check
+        # Basic presence check for upper body
         if ls.visibility < 0.5 or rs.visibility < 0.5:
             return None
 
@@ -127,34 +126,70 @@ class RefereeSignalsAgent(BaseAgent):
         if shoulder_width < 0.01:
             return None
 
-        # -- Check 1: Stop Clock (Right or Left hand straight up) --
-        # Hand must be significantly above elbow, and elbow above shoulder
-        r_arm_up = rw.y < re.y and re.y < rs.y and (rs.y - rw.y) > shoulder_width
-        l_arm_up = lw.y < le.y and le.y < ls.y and (ls.y - lw.y) > shoulder_width
+        shoulder_y = (ls.y + rs.y) / 2
         
-        if r_arm_up or l_arm_up:
-            # Differentiate from other gestures: make sure it's purely vertical
-            # Not crossing the body center heavily.
-            return "Stop Clock (Foul / Violation)"
+        # Estimate waist if hips are not visible
+        if lh.visibility < 0.5 or rh.visibility < 0.5:
+            waist_y = shoulder_y + shoulder_width * 1.5
+        else:
+            waist_y = (lh.y + rh.y) / 2
 
-        # -- Check 2: Substitution (Crossed wrists in front of chest) --
-        # X-shape constraint: Wrists close to each other, hands near shoulder level
+        # Helper: Arm up check (wrist above elbow, elbow above shoulder)
+        def is_arm_up(w, e, s):
+            return w.y < e.y and e.y < s.y and (s.y - w.y) > shoulder_width * 0.8
+
+        l_up = is_arm_up(lw, le, ls)
+        r_up = is_arm_up(rw, re, rs)
         wrists_dist = dist(lw, rw)
-        wrists_crossed = wrists_dist < (shoulder_width * 0.5)
-        
-        hands_at_chest_level = (lw.y < ls.y + 0.1) and (rw.y < rs.y + 0.1) and (lw.y > ls.y - 0.4)
-        
-        if wrists_crossed and hands_at_chest_level:
-            return "Substitution / Auswechslung"
 
-        # -- Check 3: Timeout (T-Shape) --
-        # One hand horizontal (index finger to palm), one vertical.
-        # Heuristic: hands are touching or very close, but elbows are far apart
-        hands_touching = wrists_dist < (shoulder_width * 0.6)
-        elbows_far = dist(le, re) > (shoulder_width * 0.8)
-        hands_high = lw.y < ls.y and rw.y < rs.y  # T-shape usually done around face/neck level
+        # 1. Both Arms Up (Jump Ball)
+        if l_up and r_up:
+            return "Jump Ball"
+
+        # 2. Touch Head (24-Second Violation)
+        def touches_head(w):
+            return dist(w, nose) < shoulder_width * 0.6 and w.y < ls.y
         
+        if (touches_head(lw) and not touches_head(rw)) or (touches_head(rw) and not touches_head(lw)):
+            if not l_up and not r_up:
+                return "24-Second Violation"
+
+        # 3. Hands on Shoulders (NBA Full Timeout)
+        if ruleset == "nba":
+            def touches_shoulder(w):
+                return dist(w, ls) < shoulder_width * 0.5 or dist(w, rs) < shoulder_width * 0.5
+            if touches_shoulder(lw) and touches_shoulder(rw) and not l_up and not r_up:
+                if le.y > shoulder_y and re.y > shoulder_y:
+                    return "Full Timeout (NBA)"
+
+        # 4. Hands on Hips (Blocking Foul)
+        wrists_near_waist = abs(lw.y - waist_y) < shoulder_width * 0.6 and abs(rw.y - waist_y) < shoulder_width * 0.6
+        elbows_wide = dist(le, re) > shoulder_width * 1.2
+        if wrists_near_waist and elbows_wide and not l_up and not r_up:
+            if ruleset == "nba":
+                return "Blocking Foul (NBA)"
+            return "Blocking / Illegal Screen (FIBA)"
+
+        # 5. Substitution / Crossed Arms
+        wrists_crossed = wrists_dist < (shoulder_width * 0.5)
+        hands_at_chest = (lw.y > shoulder_y - shoulder_width * 0.4) and (lw.y < waist_y - shoulder_width * 0.2)
+        elbows_not_too_far = dist(le, re) < shoulder_width * 1.2
+        if wrists_crossed and hands_at_chest and elbows_not_too_far:
+            if ruleset == "nba":
+                return "Substitution / Illegal Screen (NBA)"
+            return "Substitution (FIBA)"
+
+        # 6. T-Shape (Timeout / Technical Foul)
+        hands_touching = wrists_dist < (shoulder_width * 0.7)
+        elbows_far = dist(le, re) > (shoulder_width * 0.9)
+        hands_high = lw.y < shoulder_y + shoulder_width * 0.5 and rw.y < shoulder_y + shoulder_width * 0.5
         if hands_touching and elbows_far and hands_high and not wrists_crossed:
-            return "Timeout"
+            if ruleset == "nba":
+                return "20-Sec Timeout / Tech (NBA)"
+            return "Timeout / Tech Foul (FIBA)"
+
+        # 7. One Arm Up (Stop Clock)
+        if l_up or r_up:
+            return "Stop Clock (Foul / Violation)"
 
         return None
