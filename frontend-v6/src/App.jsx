@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileVideo, Activity, Target, Shield, Clock, PlusCircle, CheckCircle, XCircle } from 'lucide-react';
+import { UploadCloud, FileVideo, Activity, Target, Shield, CheckCircle, XCircle } from 'lucide-react';
 import axios from 'axios';
+import ShotChart from './components/ShotChart';
 
 // API Configuration
 const API_BASE = 'http://localhost:8000';
@@ -200,34 +201,31 @@ function App() {
               ))}
             </div>
 
-            <div className="glass p-6">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Activity className="w-5 h-5" /> Shot Attempt Log</h3>
-              <div className="overflow-x-auto rounded-xl border border-slate-700/50">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-slate-800/80 text-slate-300">
-                    <tr>
-                      <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Shooter ID</th>
-                      <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Zone</th>
-                      <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Result</th>
-                      <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">Frame</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/50 bg-slate-900/40">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div className="lg:col-span-2 glass p-6 h-full flex flex-col justify-center">
+                <ShotChart shots={resultsData.shots} title="Team Shot Distribution" />
+              </div>
+
+              <div className="glass p-6 h-full overflow-hidden flex flex-col">
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Activity className="w-5 h-5" /> Detailed Log</h3>
+                <div className="overflow-y-auto pr-2 flex-grow max-h-[400px]">
+                  <div className="space-y-3">
                     {resultsData.shots.map((shot, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="px-6 py-4 font-mono">#{shot.shooter_id}</td>
-                        <td className="px-6 py-4 text-slate-300">{shot.zone}</td>
-                        <td className="px-6 py-4">
+                      <div key={idx} className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50 flex justify-between items-center text-sm">
+                        <div>
+                          <p className="font-semibold text-slate-200">#{"shooter_id" in shot ? shot.shooter_id : "?"} - {shot.zone}</p>
+                          <p className="text-slate-400 text-xs">Frame {shot.start_frame}</p>
+                        </div>
+                        <div>
                           {shot.status === 'made'
-                            ? <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-medium"><CheckCircle className="w-4 h-4" /> Made</span>
-                            : <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 font-medium"><XCircle className="w-4 h-4" /> Missed</span>
+                            ? <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 font-medium text-xs"><CheckCircle className="w-3 h-3" /> Made</span>
+                            : <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500/10 text-rose-400 font-medium text-xs"><XCircle className="w-3 h-3" /> Missed</span>
                           }
-                        </td>
-                        <td className="px-6 py-4 font-mono text-slate-400">{shot.start_frame}</td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -95,8 +95,10 @@ class ShotTracker:
             if shooter_id is not None and self.geometry:
                 _, _, mx, my = player_positions[shooter_id]
                 shot["zone"] = self.geometry.get_zone(mx, my)
+                shot["coord_m"] = (float(mx), float(my))
             else:
                 shot["zone"] = "Unknown"
+                shot["coord_m"] = None
                 
             self.active_shots.append(shot)
 
