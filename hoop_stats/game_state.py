@@ -6,6 +6,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
+from .basketball_rules import BasketballRules, FIBA_RULES
 
 
 @dataclass
@@ -24,21 +25,22 @@ class GameState:
     Protected by a reentrant lock so any agent thread can safely read/write.
     """
 
-    def __init__(self):
+    def __init__(self, rules: BasketballRules = None):
         self._lock = threading.RLock()
+        self.rules = rules or FIBA_RULES
 
         # ── Game Clock ──────────────────────────────────────────────────────
-        self.quarter: int = 1                    # 1-4, 5+ for overtime
-        self.quarter_length_s: float = 600.0     # 10 min FIBA
-        self.game_clock_s: float = 600.0         # counts down
+        self.quarter: int = 1
+        self.quarter_length_s: float = self.rules.quarter_length_min * 60
+        self.game_clock_s: float = self.quarter_length_s
         self.game_clock_running: bool = False
         self.game_over: bool = False
 
         # ── Shot Clock ──────────────────────────────────────────────────────
-        self.shot_clock_s: float = 24.0
+        self.shot_clock_s: float = self.rules.shot_clock_s
         self.shot_clock_running: bool = False
-        self.shot_clock_max: float = 24.0        # full reset
-        self.shot_clock_short: float = 14.0      # offensive rebound reset
+        self.shot_clock_max: float = self.rules.shot_clock_s
+        self.shot_clock_short: float = self.rules.shot_clock_reset_offensive_reb
 
         # ── Score ───────────────────────────────────────────────────────────
         self.score_home: int = 0
@@ -132,6 +134,8 @@ class GameState:
                 "team_fouls_home": dict(self.team_fouls_home),
                 "team_fouls_away": dict(self.team_fouls_away),
                 "game_over": self.game_over,
+                "ruleset": self.rules.name,
+                "personal_foul_limit": self.rules.personal_foul_limit,
                 "recent_events": [
                     {
                         "time": e.timestamp,

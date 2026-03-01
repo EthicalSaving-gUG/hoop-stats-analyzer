@@ -8,6 +8,7 @@ import uuid
 from hoop_stats.analyzer import BasketballAnalyzer
 from hoop_stats.game_state import GameState
 from hoop_stats.stream_manager import StreamManager
+from hoop_stats.basketball_rules import get_rules
 from hoop_stats.agents.shot_clock_agent import ShotClockAgent
 from hoop_stats.agents.game_clock_agent import GameClockAgent
 from hoop_stats.agents.scoresheet_agent import ScoresheetAgent
@@ -94,9 +95,13 @@ async def start_game(config: dict):
             a.stop()
         STREAM_MGR.stop_all()
 
-    GAME_STATE = GameState()
-    GAME_STATE.team_home_name = config.get("team_home", "Home")
-    GAME_STATE.team_away_name = config.get("team_away", "Away")
+    # Select ruleset (FIBA or NBA)
+    ruleset_key = config.get("ruleset", "fiba")
+    rules = get_rules(ruleset_key)
+
+    GAME_STATE = GameState(rules=rules)
+    GAME_STATE.team_home_name = config.get("team_home", "Team Schwarz")
+    GAME_STATE.team_away_name = config.get("team_away", "Team Gelb")
 
     STREAM_MGR = StreamManager()
     cameras = config.get("cameras", [])

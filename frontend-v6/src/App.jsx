@@ -23,6 +23,7 @@ function App() {
   const [cameras, setCameras] = useState([{ id: 'cam1', source: '' }]);
   const [teamHome, setTeamHome] = useState('Team Schwarz');
   const [teamAway, setTeamAway] = useState('Team Gelb');
+  const [ruleset, setRuleset] = useState('fiba');
 
   // Poll for file analysis progress
   useEffect(() => {
@@ -98,6 +99,7 @@ function App() {
         agents: activeAgents,
         team_home: teamHome || 'Team Schwarz',
         team_away: teamAway || 'Team Gelb',
+        ruleset: ruleset,
       });
       setAppState('LIVE');
     } catch (e) {
@@ -170,6 +172,25 @@ function App() {
                 <label className="text-sm text-slate-400 mb-1 block">Team Away</label>
                 <input value={teamAway} onChange={(e) => setTeamAway(e.target.value)} placeholder="z.B. Team Gelb"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-orange-500 outline-none" />
+              </div>
+            </div>
+
+            {/* Ruleset Selection */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Regelwerk</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <motion.div whileHover={{ scale: 1.02 }} onClick={() => setRuleset('fiba')}
+                  className={`glass p-5 cursor-pointer text-center transition-all border-2 ${ruleset === 'fiba' ? 'border-blue-500/50 bg-blue-500/5' : 'border-transparent'}`}>
+                  <span className="text-3xl block mb-2">🌍</span>
+                  <h4 className="text-lg font-semibold">FIBA 2024</h4>
+                  <p className="text-slate-400 text-xs mt-1">4×10 Min · 5 Fouls · Kein Def. 3-Sek</p>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} onClick={() => setRuleset('nba')}
+                  className={`glass p-5 cursor-pointer text-center transition-all border-2 ${ruleset === 'nba' ? 'border-red-500/50 bg-red-500/5' : 'border-transparent'}`}>
+                  <span className="text-3xl block mb-2">🇺🇸</span>
+                  <h4 className="text-lg font-semibold">NBA 2024-25</h4>
+                  <p className="text-slate-400 text-xs mt-1">4×12 Min · 6 Fouls · Def. 3-Sek Regel</p>
+                </motion.div>
               </div>
             </div>
 
