@@ -7,6 +7,7 @@ const AGENT_META = {
     scoresheet: { icon: '📋', title: 'Kampfbericht', desc: 'Protokolliert Punkte, Fouls und Auswechslungen' },
     referee: { icon: '🧑‍⚖️', title: 'Schiedsrichter', desc: 'Erkennt Regelverstöße und gibt Warnungen' },
     pose: { icon: '🧍‍♂️', title: 'Biomechanik KI', desc: 'Analysiert Körperhaltung (Release Angle, 3er-Linie) via MediaPipe' },
+    referee_signals: { icon: '✋', title: 'Schiri Signale', desc: 'Erkennt Handzeichen (Timeout, Stop Clock) via KI-Pose' },
 };
 
 const AgentCard = ({ agentKey, enabled, onToggle, isLive, isActive }) => {
