@@ -59,8 +59,15 @@ class GameState:
         # ── Event Log ───────────────────────────────────────────────────────
         self.events: List[GameEvent] = []
 
-        # ── Player Stats (Kampfbericht) ─────────────────────────────────────
-        self.player_stats: Dict[str, Dict[str, Any]] = {}
+        # ── Player / Pose Stats ─────────────────────────────────────────────
+        self.player_fouls: Dict[str, int] = {}   # player_id -> fouls
+        self.player_stats: Dict[str, Any] = {
+            "biomechanics_live": {
+                "elbow_angle": 0.0,
+                "knee_angle": 0.0,
+                "status": "Idle"
+            }
+        }
         # { player_id: { "name": "", "jersey": "", "team": "", "points": 0,
         #                "fouls": 0, "fg_made": 0, "fg_att": 0, ... } }
 
@@ -136,6 +143,7 @@ class GameState:
                 "game_over": self.game_over,
                 "ruleset": self.rules.name,
                 "personal_foul_limit": self.rules.personal_foul_limit,
+                "biomechanics": self.player_stats["biomechanics_live"],
                 "recent_events": [
                     {
                         "time": e.timestamp,

@@ -80,9 +80,44 @@ const LiveDashboard = ({ onStop }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <InfoCard icon={<Users className="w-5 h-5 text-blue-400" />} label="Teamfouls Home" value={state.team_fouls_home?.[state.quarter] || 0} />
                 <InfoCard icon={<Users className="w-5 h-5 text-emerald-400" />} label="Teamfouls Away" value={state.team_fouls_away?.[state.quarter] || 0} />
-                <InfoCard icon={<Trophy className="w-5 h-5 text-orange-400" />} label="Aktive Agenten" value={state.active_agents ? Object.values(state.active_agents).filter(v => v).length : 0} />
+                <InfoCard icon={<Trophy className="w-5 h-5 text-orange-400" />} label="Regelwerk" value={state.ruleset === 'fiba' ? 'FIBA' : 'NBA'} />
                 <InfoCard icon={<Clock className="w-5 h-5 text-purple-400" />} label="Events" value={events.length} />
             </div>
+
+            {/* Biomechanics AI Edge */}
+            {state.biomechanics && (
+                <div className="glass p-5 flex items-center justify-between border-l-4 border-indigo-500">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-2xl">
+                            🧍‍♂️
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-indigo-400">Biomechanics AI Edge</h3>
+                            <p className="text-sm text-slate-400">Live Shooter Analysis via MediaPipe</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-8 text-center">
+                        <div>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Status</p>
+                            <p className={`font-semibold ${state.biomechanics.status === 'Idle' ? 'text-slate-400' : 'text-emerald-400'}`}>
+                                {state.biomechanics.status}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Release Angle</p>
+                            <p className="text-xl font-bold font-mono text-indigo-300">
+                                {state.biomechanics.elbow_angle}°
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Knee Flexion</p>
+                            <p className="text-xl font-bold font-mono text-indigo-300">
+                                {state.biomechanics.knee_angle}°
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Event Feed */}

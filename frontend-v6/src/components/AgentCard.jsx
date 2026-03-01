@@ -6,6 +6,7 @@ const AGENT_META = {
     game_clock: { icon: '⏱️', title: 'Spielzeiterfassung', desc: 'Steuert Spieluhr, Viertel und Timeouts' },
     scoresheet: { icon: '📋', title: 'Kampfbericht', desc: 'Protokolliert Punkte, Fouls und Auswechslungen' },
     referee: { icon: '🧑‍⚖️', title: 'Schiedsrichter', desc: 'Erkennt Regelverstöße und gibt Warnungen' },
+    pose: { icon: '🧍‍♂️', title: 'Biomechanik KI', desc: 'Analysiert Körperhaltung (Release Angle, 3er-Linie) via MediaPipe' },
 };
 
 const AgentCard = ({ agentKey, enabled, onToggle, isLive, isActive }) => {

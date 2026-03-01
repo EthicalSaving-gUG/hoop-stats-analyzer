@@ -18,7 +18,7 @@ function App() {
 
   // Kampfgericht config
   const [enabledAgents, setEnabledAgents] = useState({
-    shot_clock: true, game_clock: true, scoresheet: true, referee: true
+    shot_clock: true, game_clock: true, scoresheet: true, referee: true, pose: true
   });
   const [cameras, setCameras] = useState([{ id: 'cam1', source: '' }]);
   const [teamHome, setTeamHome] = useState('Team Schwarz');

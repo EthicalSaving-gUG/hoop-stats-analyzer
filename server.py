@@ -13,6 +13,7 @@ from hoop_stats.agents.shot_clock_agent import ShotClockAgent
 from hoop_stats.agents.game_clock_agent import GameClockAgent
 from hoop_stats.agents.scoresheet_agent import ScoresheetAgent
 from hoop_stats.agents.referee_agent import RefereeAgent
+from hoop_stats.agents.pose_agent import PoseAnalysisAgent
 
 app = FastAPI()
 
@@ -74,6 +75,7 @@ AGENT_CLASSES = {
     "game_clock": GameClockAgent,
     "scoresheet": ScoresheetAgent,
     "referee":    RefereeAgent,
+    "pose":       PoseAnalysisAgent,
 }
 
 @app.post("/game/start")
