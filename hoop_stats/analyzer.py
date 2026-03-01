@@ -25,7 +25,7 @@ class BasketballAnalyzer:
         self.shot_tracker = None   # initialised after first frame
 
     # ─────────────────────────────────────────────────────────────────────────
-    def run(self, court_calibration_points=None, max_frames=None, skip_frames=3):
+    def run(self, court_calibration_points=None, max_frames=None, skip_frames=3, progress_callback=None):
         cap = cv2.VideoCapture(self.video_path)
         if not cap.isOpened():
             print(f"ERROR: Cannot open video: {self.video_path}")
@@ -116,8 +116,10 @@ class BasketballAnalyzer:
             frame_idx += 1
             if frame_idx % 150 == 0:
                 pct = (frame_idx / total * 100) if total else 0
-                print(f"  Frame {frame_idx}/{total}  ({pct:.0f}%)  "
-                      f"Players tracked: {len(self.player_metadata)}")
+                msg = f"  Frame {frame_idx}/{total}  ({pct:.0f}%)  Players tracked: {len(self.player_metadata)}"
+                print(msg)
+                if progress_callback:
+                    progress_callback(min(99, int(pct)), msg)
 
         cap.release()
         self._finalize_stats()
@@ -219,7 +221,8 @@ class BasketballAnalyzer:
         max_frames=None,
         skip_frames=3,
         n_workers=None,
-        yolo_interval=30
+        yolo_interval=30,
+        progress_callback=None
     ):
         """
         Accelerated pipeline that splits the video into segments processed in 
@@ -272,8 +275,15 @@ class BasketballAnalyzer:
 
         # ── Run segments in parallel processes ─────────────────────────────
         ctx = mp.get_context("spawn")  # spawn is safe on Windows
+        partial_results = []
         with ctx.Pool(processes=n_workers) as pool:
-            partial_results = pool.map(_segment_worker, worker_args)
+            completed = 0
+            for partial in pool.imap_unordered(_segment_worker, worker_args):
+                partial_results.append(partial)
+                completed += 1
+                if progress_callback:
+                    pct = int((completed / len(worker_args)) * 95) # Leave 5% for finalize
+                    progress_callback(pct, f"Processed segment {completed}/{len(worker_args)}")
 
         # ── Merge partial results into main state ───────────────────────────
         for partial in partial_results:
