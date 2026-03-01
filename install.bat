@@ -28,16 +28,18 @@ npm --version >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
     echo Node.js is not installed. You may skip this if you don't need the web UI.
 ) ELSE (
-    npm install
+    cd frontend-v6
+    call npm install
+    cd ..
 )
 
 echo ===================================================
 echo Setup Complete!
 echo.
-echo To run the analysis pipeline:
+echo To run the analysis pipeline (CLI Mode):
 echo   venv\Scripts\python main.py
 echo.
-echo To run the web dashboard:
-echo   node server.js    (or npm start)
+echo To run the Web Dashboard GUI:
+echo   Double-click run.bat
 echo ===================================================
 pause
