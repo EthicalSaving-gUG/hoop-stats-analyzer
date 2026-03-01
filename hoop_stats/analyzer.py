@@ -7,7 +7,7 @@ from .metrics import PlayerMetrics
 from .ocr import JerseyOCR
 from .exporter import DataExporter
 from .team_colors import get_dominant_jersey_color, assign_teams_by_color
-from .scoring import ScoringDetector
+from .shot_tracker import ShotTracker
 from .roi_tracker import MultiRoiTracker
 from .video_utils import get_video_info, get_segment_ranges, read_segment
 
@@ -22,7 +22,7 @@ class BasketballAnalyzer:
 
         self.player_metadata = {}      # {id: {"jersey": "...", "team": "..."}}
         self.player_colors   = {}      # {id: color_name} – raw dominant color
-        self.scoring_detector = None   # initialised after first frame
+        self.shot_tracker = None   # initialised after first frame
 
     # ─────────────────────────────────────────────────────────────────────────
     def run(self, court_calibration_points=None, max_frames=None, skip_frames=3):
@@ -45,7 +45,7 @@ class BasketballAnalyzer:
                 court_calibration_points['real']
             )
 
-        self.scoring_detector = ScoringDetector(fw, fh)
+        self.shot_tracker = ShotTracker(fw, fh)
 
         print(f"Video: {fw}x{fh} @ {fps:.1f}fps  |  {total} frames total")
         frame_idx = 0
@@ -72,6 +72,7 @@ class BasketballAnalyzer:
                 frame, persist=True, classes=[0], verbose=False, conf=0.35
             )
 
+            player_positions = {}
             if results[0].boxes.id is not None:
                 boxes = results[0].boxes.xyxy.cpu().numpy()
                 ids   = results[0].boxes.id.cpu().numpy().astype(int)
@@ -82,6 +83,8 @@ class BasketballAnalyzer:
                     py = box[3]            # ground contact point
                     mx, my = self.geometry.pixel_to_meter(px, py)
                     self.metrics.update_position(obj_id, mx, my, frame_idx)
+                    
+                    player_positions[obj_id] = (px, py, mx, my)
 
                     # ── 3. Jersey number (OCR on torso crop) ──────────────
                     # Ensure defaults always present
@@ -108,7 +111,7 @@ class BasketballAnalyzer:
                 by = (b_box[1] + b_box[3]) / 2
                 ball_centers.append((bx, by))
             
-            self.scoring_detector.update(ball_centers, frame_idx)
+            self.shot_tracker.update(ball_centers, player_positions, frame_idx)
 
             frame_idx += 1
             if frame_idx % 150 == 0:
@@ -146,22 +149,24 @@ class BasketballAnalyzer:
             }
 
         # Add scoring summary
-        scores = self.scoring_detector.get_total_scores() if self.scoring_detector else {}
+        scores = self.shot_tracker.get_total_scores() if self.shot_tracker else {}
+        shots_log = self.shot_tracker.completed_shots if self.shot_tracker else []
 
         output = {
             "players": final_data,
             "scoring": scores,
-            "team_summary": self._build_team_summary(final_data)
+            "team_summary": self._build_team_summary(final_data, shots_log),
+            "shots": shots_log
         }
 
         self.exporter.export_json(output)
-        self.exporter.export_csv_players(final_data, scores)
+        self.exporter.export_csv_full(output)
         print("\n=== Analysis Complete ===")
         print(f"Players tracked : {len(final_data)}")
         print(f"Scoring summary : {scores}")
         print("Files saved.\n")
 
-    def _build_team_summary(self, final_data):
+    def _build_team_summary(self, final_data, shots_log):
         summary = {}
         for pid, d in final_data.items():
             team = d["team"]
@@ -170,16 +175,41 @@ class BasketballAnalyzer:
                     "player_count":   0,
                     "avg_max_speed":  [],
                     "avg_max_accel":  [],
+                    "FGA": 0,
+                    "FGM": 0,
+                    "3PA": 0,
+                    "3PM": 0
                 }
             summary[team]["player_count"] += 1
             summary[team]["avg_max_speed"].append(d["max_speed_ms"])
             summary[team]["avg_max_accel"].append(d["max_accel_ms2"])
+
+        for shot in shots_log:
+            pid = str(shot["shooter_id"])
+            if pid in final_data:
+                team = final_data[pid]["team"]
+                if team in summary:
+                    summary[team]["FGA"] += 1
+                    if shot["status"] == "made":
+                        summary[team]["FGM"] += 1
+                    
+                    if shot["zone"] in ("three_point", "3PT Wing"):
+                        summary[team]["3PA"] += 1
+                        if shot["status"] == "made":
+                            summary[team]["3PM"] += 1
 
         for team, s in summary.items():
             speeds = s["avg_max_speed"]
             accels = s["avg_max_accel"]
             s["avg_max_speed"] = float(round(sum(speeds)/len(speeds), 2)) if speeds else 0.0
             s["avg_max_accel"] = float(round(sum(accels)/len(accels), 2)) if accels else 0.0
+            
+            fga = s["FGA"]
+            fgm = s["FGM"]
+            tpm = s["3PM"]
+            s["FG%"] = float(round((fgm / fga) * 100, 1)) if fga > 0 else 0.0
+            s["eFG%"] = float(round(((fgm + 0.5 * tpm) / fga) * 100, 1)) if fga > 0 else 0.0
+
         return summary
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -217,7 +247,7 @@ class BasketballAnalyzer:
                 court_calibration_points["real"],
             )
 
-        self.scoring_detector = ScoringDetector(fw, fh)
+        self.shot_tracker = ShotTracker(fw, fh)
 
         if n_workers is None:
             n_workers = min(4, mp.cpu_count())
@@ -278,7 +308,11 @@ class BasketballAnalyzer:
 
             # Merge scoring (sum per hoop zone)
             for zi, pts in enumerate(partial["scores"]):
-                self.scoring_detector.scores[zi] += pts
+                self.shot_tracker.scores[zi] += pts
+            
+            # Merge completed shots
+            if "shots" in partial:
+                self.shot_tracker.completed_shots.extend(partial["shots"])
 
         self._finalize_stats()
 
@@ -298,7 +332,7 @@ def _segment_worker(args):
     from .metrics import PlayerMetrics
     from .ocr import JerseyOCR
     from .team_colors import get_dominant_jersey_color
-    from .scoring import ScoringDetector
+    from .shot_tracker import ShotTracker
     from .roi_tracker import MultiRoiTracker
     from .video_utils import get_video_info, read_segment
 
@@ -311,7 +345,7 @@ def _segment_worker(args):
     metrics    = PlayerMetrics(fps=fps)
     ocr        = JerseyOCR()
     tracker    = MultiRoiTracker()
-    scoring    = ScoringDetector(fw, fh)
+    shot_tracker = ShotTracker(fw, fh)
 
     player_metadata = {}
     player_colors   = {}
@@ -365,6 +399,7 @@ def _segment_worker(args):
 
         # ── Process Tracked Boxes ─────────────────────────────────────────
         ball_centers = []
+        player_positions = {}
         for obj_id, box in updated_boxes.items():
             if obj_id < 0:
                 # It's a ball
@@ -377,14 +412,16 @@ def _segment_worker(args):
                 py = box[3]
                 mx, my = geometry.pixel_to_meter(px, py)
                 metrics.update_position(obj_id, mx, my, frame_idx)
+                player_positions[obj_id] = (px, py, mx, my)
 
         # ── Scoring ───────────────────────────────────────────────────────
-        scoring.update(ball_centers, frame_idx)
+        shot_tracker.update(ball_centers, player_positions, frame_idx)
 
     return {
         "player_metadata": player_metadata,
         "player_colors":   player_colors,
         "trajectories":    metrics.trajectories,
         "metrics":         metrics.metrics,
-        "scores":          scoring.scores,
+        "scores":          shot_tracker.scores,
+        "shots":           shot_tracker.completed_shots,
     }

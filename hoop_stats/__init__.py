@@ -5,4 +5,4 @@ from .metrics import PlayerMetrics
 from .ocr import JerseyOCR
 from .exporter import DataExporter
 from .team_colors import get_dominant_jersey_color, assign_teams_by_color
-from .scoring import ScoringDetector
+from .shot_tracker import ShotTracker
