@@ -5,6 +5,9 @@ import axios from 'axios';
 import ShotChart from './components/ShotChart';
 import AgentCard from './components/AgentCard';
 import LiveDashboard from './components/LiveDashboard';
+import ManualSetup from './components/ManualSetup';
+import ManualDashboard from './components/ManualDashboard';
+import ClientAIBenchmark from './components/ClientAIBenchmark';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -24,6 +27,8 @@ function App() {
   const [teamHome, setTeamHome] = useState('Team Schwarz');
   const [teamAway, setTeamAway] = useState('Team Gelb');
   const [ruleset, setRuleset] = useState('fiba');
+  const [processingFps, setProcessingFps] = useState(10);
+  const [poseModel, setPoseModel] = useState('mediapipe');
 
   // Poll for file analysis progress
   useEffect(() => {
@@ -100,6 +105,8 @@ function App() {
         team_home: teamHome || 'Team Schwarz',
         team_away: teamAway || 'Team Gelb',
         ruleset: ruleset,
+        processing_fps: processingFps,
+        pose_model: poseModel,
       });
       setAppState('LIVE');
     } catch (e) {
@@ -131,7 +138,7 @@ function App() {
         {/* ─── MODE SELECT ─── */}
         {appState === 'MODE_SELECT' && (
           <motion.div key="mode" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-3xl z-10 grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="w-full max-w-6xl z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('UPLOAD')}
               className="glass p-8 cursor-pointer text-center hover:border-orange-500/30 transition-all border-2 border-transparent"
@@ -147,6 +154,22 @@ function App() {
               <div className="text-5xl mb-4">🏟️</div>
               <h2 className="text-2xl font-semibold mb-2">Live Kampfgericht</h2>
               <p className="text-slate-400 text-sm">Starte die Echtzeit-Spielüberwachung mit 24s-Uhr, Spieluhr, Kampfbericht und Schiedsrichter.</p>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('MANUAL_SETUP')}
+              className="glass p-8 cursor-pointer text-center hover:border-orange-500/30 transition-all border-2 border-transparent"
+            >
+              <div className="text-5xl mb-4">📝</div>
+              <h2 className="text-2xl font-semibold mb-2">Manueller Bericht</h2>
+              <p className="text-slate-400 text-sm">Video ansehen und Spielerstatistiken manuell auf einem Dashboard erfassen.</p>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('CLIENT_AI_BENCHMARK')}
+              className="glass p-8 cursor-pointer text-center hover:border-indigo-500/30 transition-all border-2 border-transparent"
+            >
+              <div className="text-5xl mb-4">🧪</div>
+              <h2 className="text-2xl font-semibold mb-2">Browser-KI Benchmark</h2>
+              <p className="text-slate-400 text-sm">Testet die Videoanalyse direkt in deinem Browser (ohne Server-Upload).</p>
             </motion.div>
           </motion.div>
         )}
@@ -194,6 +217,34 @@ function App() {
               </div>
             </div>
 
+            {/* Performance Slider */}
+            <div className="glass p-5">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-orange-400" /> KI Auswertungsrate (FPS)
+                </h3>
+                <span className="text-xl font-bold text-orange-400">{processingFps} FPS</span>
+              </div>
+              <p className="text-sm text-slate-400 mb-4">
+                Je höher die Rate, desto flüssiger das KI-Tracking (erfordert mehr Rechenleistung).
+                Das Video-Playback bleibt immer flüssig.
+              </p>
+              <input
+                type="range"
+                min="5"
+                max="30"
+                step="5"
+                value={processingFps}
+                onChange={(e) => setProcessingFps(parseInt(e.target.value))}
+                className="w-full accent-orange-500 bg-slate-700 rounded-lg appearance-none h-2 cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-slate-500 mt-2">
+                <span>Leistungsschwache PCs (5)</span>
+                <span>Normal (10)</span>
+                <span>Workstation (30+)</span>
+              </div>
+            </div>
+
             {/* Agent Selection */}
             <div>
               <h3 className="text-lg font-semibold mb-3">Agenten auswählen</h3>
@@ -203,6 +254,57 @@ function App() {
                 ))}
               </div>
             </div>
+
+            {/* Pose Model Selection (Conditional if pose agent is enabled) */}
+            {enabledAgents.pose && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass p-5 space-y-3 border-l-4 border-indigo-500">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    🧍‍♂️ Körperhaltung-Modell (Pose Model)
+                  </h3>
+                  <span className="text-xs uppercase tracking-widest text-indigo-400 font-bold px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
+                    Kombinierter Modus
+                  </span>
+                </div>
+                <p className="text-sm text-slate-400">
+                  Wähle aus, welches KI-Modell für die biomechanische Analyse des Schützen verwendet werden soll.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setPoseModel('mediapipe')}
+                    className={`glass p-4 cursor-pointer text-left transition-all border-2 flex items-start gap-3 ${
+                      poseModel === 'mediapipe'
+                        ? 'border-indigo-500/50 bg-indigo-500/5 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                        : 'border-transparent hover:bg-slate-800/30'
+                    }`}
+                  >
+                    <div className="text-2xl pt-1">⚡</div>
+                    <div>
+                      <h4 className="font-semibold text-slate-200">MediaPipe Pose</h4>
+                      <p className="text-slate-400 text-xs mt-0.5">Leichtgewichtig & extrem schnell. Läuft flüssig auf Standard-CPUs ohne Grafikkarte.</p>
+                    </div>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setPoseModel('densepose')}
+                    className={`glass p-4 cursor-pointer text-left transition-all border-2 flex items-start gap-3 ${
+                      poseModel === 'densepose'
+                        ? 'border-indigo-500/50 bg-indigo-500/5 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
+                        : 'border-transparent hover:bg-slate-800/30'
+                    }`}
+                  >
+                    <div className="text-2xl pt-1">🌀</div>
+                    <div>
+                      <h4 className="font-semibold text-slate-200 flex items-center gap-1.5">
+                        DensePose (Detectron2)
+                      </h4>
+                      <p className="text-slate-400 text-xs mt-0.5">Volles 3D-Körpernetz. Extrem detailliert, erfordert NVIDIA GPU-Server (z.B. RTX 4090).</p>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Camera Inputs */}
             <div>
@@ -242,6 +344,26 @@ function App() {
           <motion.div key="live" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full z-10 flex justify-center">
             <LiveDashboard onStop={stopLiveGame} />
           </motion.div>
+        )}
+
+        {/* ─── MANUAL SETUP ─── */}
+        {appState === 'MANUAL_SETUP' && (
+          <ManualSetup 
+            onStart={() => setAppState('MANUAL_REVIEW')} 
+            onBack={() => setAppState('MODE_SELECT')} 
+          />
+        )}
+
+        {/* ─── MANUAL REVIEW DASHBOARD ─── */}
+        {appState === 'MANUAL_REVIEW' && (
+          <motion.div key="manual_review" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full max-w-7xl">
+            <ManualDashboard onExit={() => setAppState('MODE_SELECT')} />
+          </motion.div>
+        )}
+
+        {/* ─── CLIENT AI BENCHMARK ─── */}
+        {appState === 'CLIENT_AI_BENCHMARK' && (
+          <ClientAIBenchmark onBack={() => setAppState('MODE_SELECT')} />
         )}
 
         {/* ─── FILE UPLOAD ─── */}

@@ -6,6 +6,7 @@ import shutil
 import os
 import uuid
 from hoop_stats.analyzer import BasketballAnalyzer
+from hoop_stats.primitive_renderer import PrimitiveRenderer
 from hoop_stats.game_state import GameState
 from hoop_stats.stream_manager import StreamManager
 from hoop_stats.basketball_rules import get_rules
@@ -30,6 +31,7 @@ app.mount("/results", StaticFiles(directory="results"), name="results")
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # ── Analysis Jobs (file upload mode) ────────────────────────────────────────
 JOBS = {}
@@ -45,6 +47,17 @@ def run_background_analysis(job_id: str, file_path: str, output_name: str, calib
     JOBS[job_id]["status"] = "Complete"
     JOBS[job_id]["result_file"] = f"{output_name}.json"
 
+def run_background_visualize(job_id: str, file_path: str, output_path: str, mode: str):
+    JOBS[job_id]["status"] = "Initializing renderer..."
+    def on_progress(pct, msg):
+        JOBS[job_id]["progress"] = pct
+        JOBS[job_id]["status"] = msg
+    renderer = PrimitiveRenderer(0, 0, mode=mode)  # render_video auto-adopts source resolution
+    renderer.render_video(file_path, output_path, skip_frames=2, progress_callback=on_progress)
+    JOBS[job_id]["progress"] = 100
+    JOBS[job_id]["status"] = "Complete"
+    JOBS[job_id]["result_file"] = output_path
+
 @app.post("/analyze/file")
 async def analyze_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     job_id = str(uuid.uuid4())
@@ -58,6 +71,48 @@ async def analyze_file(background_tasks: BackgroundTasks, file: UploadFile = Fil
         "real": [[0, 0], [28, 0], [0, 15], [28, 15]]
     }
     background_tasks.add_task(run_background_analysis, job_id, file_path, output_name, calibration)
+    return {"status": "success", "job_id": job_id}
+
+@app.post("/analyze/visualize")
+async def visualize_file(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    mode: str = Form("wireframe"),
+):
+    """Render a primitives-only visualization video. mode = 'wireframe' or 'overlay'."""
+    job_id = str(uuid.uuid4())
+    JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    output_path = f"results/viz_{file.filename.split('.')[0]}_{job_id[:8]}.mp4"
+    background_tasks.add_task(run_background_visualize, job_id, file_path, output_path, mode)
+    return {"status": "success", "job_id": job_id}
+
+def run_background_export3d(job_id: str, file_path: str, output_path: str):
+    JOBS[job_id]["status"] = "Initializing 3D export..."
+    def on_progress(pct, msg):
+        JOBS[job_id]["progress"] = pct
+        JOBS[job_id]["status"] = msg
+    renderer = PrimitiveRenderer(0, 0, mode="3d")
+    renderer.export_3d_data(file_path, output_path, skip_frames=3, progress_callback=on_progress)
+    JOBS[job_id]["progress"] = 100
+    JOBS[job_id]["status"] = "Complete"
+    JOBS[job_id]["result_file"] = output_path
+
+@app.post("/analyze/export3d")
+async def export3d_file(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+):
+    """Export per-frame 3D primitive vectors as JSON (no video rendering)."""
+    job_id = str(uuid.uuid4())
+    JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    output_path = f"results/vectors3d_{file.filename.split('.')[0]}_{job_id[:8]}.json"
+    background_tasks.add_task(run_background_export3d, job_id, file_path, output_path)
     return {"status": "success", "job_id": job_id}
 
 @app.get("/analyze/progress/{job_id}")
@@ -122,10 +177,17 @@ async def start_game(config: dict):
 
     AGENTS = {}
     requested_agents = config.get("agents", [])
+    processing_fps = config.get("processing_fps", 10)
+    
     for agent_name in requested_agents:
         cls = AGENT_CLASSES.get(agent_name)
         if cls:
-            agent = cls(GAME_STATE, STREAM_MGR, camera_ids=camera_ids, audio_ids=audio_ids)
+            agent = cls(
+                GAME_STATE, STREAM_MGR,
+                camera_ids=camera_ids, audio_ids=audio_ids,
+                tick_rate=processing_fps,
+                pose_model=config.get("pose_model", "mediapipe")
+            )
             agent.start()
             AGENTS[agent_name] = agent
 
@@ -165,6 +227,84 @@ async def toggle_agent(data: dict):
         AGENTS[agent_name].set_active(active)
         return {"agent": agent_name, "active": active}
     return {"status": "error", "message": f"Agent '{agent_name}' not found"}
+
+# ── Manual Stats Dashboard Mode ─────────────────────────────────────────────
+from pydantic import BaseModel
+from typing import List, Optional
+
+class ManualPlayer(BaseModel):
+    id: str
+    name: str
+    jersey: str
+    team: str # "home" or "away"
+    points_2pt: int = 0
+    points_3pt: int = 0
+    points_ft: int = 0
+    fouls: int = 0
+    rebounds_off: int = 0
+    rebounds_def: int = 0
+    assists: int = 0
+    steals: int = 0
+    blocks: int = 0
+    turnovers: int = 0
+    minutes: int = 0
+
+class ManualState(BaseModel):
+    team_home: str = "Team A"
+    team_away: str = "Team B"
+    players: List[ManualPlayer] = []
+    video_url: Optional[str] = None
+
+MANUAL_STATE = ManualState()
+
+@app.post("/manual/start")
+async def manual_start(data: dict):
+    global MANUAL_STATE
+    MANUAL_STATE = ManualState(
+        team_home=data.get("team_home", "Team A"),
+        team_away=data.get("team_away", "Team B"),
+        players=[ManualPlayer(**p) for p in data.get("players", [])],
+        video_url=data.get("video_url")
+    )
+    return {"status": "success"}
+
+@app.get("/manual/state")
+async def get_manual_state():
+    return MANUAL_STATE.dict()
+
+@app.post("/manual/update-player")
+async def manual_update_player(data: dict):
+    player_id = data.get("player_id")
+    field = data.get("field")
+    value = data.get("value", 0)
+    
+    for p in MANUAL_STATE.players:
+        if p.id == player_id:
+            setattr(p, field, getattr(p, field) + value)
+            return {"status": "success", "player": p.dict()}
+    return {"status": "error", "message": "Player not found"}
+
+@app.post("/manual/add-player")
+async def manual_add_player(player: ManualPlayer):
+    MANUAL_STATE.players.append(player)
+    return {"status": "success"}
+
+@app.post("/manual/remove-player")
+async def manual_remove_player(data: dict):
+    player_id = data.get("player_id")
+    MANUAL_STATE.players = [p for p in MANUAL_STATE.players if p.id != player_id]
+    return {"status": "success"}
+
+@app.get("/manual/export")
+async def manual_export():
+    return MANUAL_STATE.dict()
+
+@app.post("/manual/upload-video")
+async def manual_upload_video(file: UploadFile = File(...)):
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"video_url": f"http://localhost:8000/uploads/{file.filename}"}
 
 # ── Legacy stream endpoint ──────────────────────────────────────────────────
 @app.post("/analyze/stream")

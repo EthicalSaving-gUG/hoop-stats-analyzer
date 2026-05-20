@@ -10,6 +10,7 @@ from .team_colors import get_dominant_jersey_color, assign_teams_by_color
 from .shot_tracker import ShotTracker
 from .roi_tracker import MultiRoiTracker
 from .video_utils import get_video_info, get_segment_ranges, read_segment
+from .primitives import Ball, PlayerCapsule, Point2D, bbox_to_ball, bbox_to_player
 
 class BasketballAnalyzer:
     def __init__(self, video_path, output_name="game_stats"):
@@ -64,54 +65,47 @@ class BasketballAnalyzer:
                 frame_idx += 1
                 continue
 
-            # We use a placeholder logic here. For actual ROI tracking,
-            # this single-threaded `run()` method is mostly a fallback.
-            # Real work happens in `_segment_worker()`.
-            # To keep `run()` functional, we just use YOLO tracking every time.
             results = self.detector.model.track(
                 frame, persist=True, classes=[0], verbose=False, conf=0.35
             )
 
-            player_positions = {}
+            player_capsules = {}
             if results[0].boxes.id is not None:
                 boxes = results[0].boxes.xyxy.cpu().numpy()
                 ids   = results[0].boxes.id.cpu().numpy().astype(int)
 
                 for box, obj_id in zip(boxes, ids):
-                    # ── 2. Real-world position & physics ──────────────────
-                    px = (box[0] + box[2]) / 2
-                    py = box[3]            # ground contact point
-                    mx, my = self.geometry.pixel_to_meter(px, py)
-                    self.metrics.update_position(obj_id, mx, my, frame_idx)
-                    
-                    player_positions[obj_id] = (px, py, mx, my)
+                    # ── Convert to PlayerCapsule primitive ─────────────────
+                    capsule = bbox_to_player(box[0], box[1], box[2], box[3], obj_id=obj_id)
 
-                    # ── 3. Jersey number (OCR on torso crop) ──────────────
-                    # Ensure defaults always present
+                    # ── Real-world position & physics ─────────────────────
+                    foot = capsule.ground_contact
+                    mx, my = self.geometry.pixel_to_meter(foot.x, foot.y)
+                    capsule.meter_pos = Point2D(mx, my)
+                    self.metrics.update_position(obj_id, capsule.meter_pos, frame_idx)
+
+                    player_capsules[obj_id] = capsule
+
+                    # ── Jersey number (OCR on torso crop) ─────────────────
                     if obj_id not in self.player_metadata:
                         self.player_metadata[obj_id] = {"jersey": "Unknown", "team": "TBD"}
 
                     if self.player_metadata[obj_id].get("jersey", "Unknown") == "Unknown":
-                        crop   = self.detector.get_jersey_crop(frame, box)
+                        crop   = self.detector.get_jersey_crop(frame, capsule)
                         number = self.ocr.identify_number(crop)
                         if number:
                             self.player_metadata[obj_id]["jersey"] = number
 
-                    # ── 4. Jersey color (sampled every 30 frames) ─────────
+                    # ── Jersey color (sampled every 30 frames) ────────────
                     if frame_idx % 30 == 0:
                         color = get_dominant_jersey_color(frame, box)
                         if color not in ("Unknown", "Mixed"):
                             self.player_colors[obj_id] = color
 
-            # ── 5. Ball / scoring detection ───────────────────────────────
-            ball_boxes = self.detector.detect_ball(frame)
-            ball_centers = []
-            for b_box in ball_boxes:
-                bx = (b_box[0] + b_box[2]) / 2
-                by = (b_box[1] + b_box[3]) / 2
-                ball_centers.append((bx, by))
-            
-            self.shot_tracker.update(ball_centers, player_positions, frame_idx)
+            # ── Ball / scoring detection ──────────────────────────────────
+            balls = self.detector.detect_ball(frame)
+
+            self.shot_tracker.update(balls, player_capsules, frame_idx)
 
             frame_idx += 1
             if frame_idx % 150 == 0:
@@ -345,6 +339,7 @@ def _segment_worker(args):
     from .shot_tracker import ShotTracker
     from .roi_tracker import MultiRoiTracker
     from .video_utils import get_video_info, read_segment
+    from .primitives import Ball, PlayerCapsule, Point2D, bbox_to_ball, bbox_to_player
 
     info     = get_video_info(video_path)
     fps      = info["fps"]
@@ -359,9 +354,6 @@ def _segment_worker(args):
 
     player_metadata = {}
     player_colors   = {}
-    
-    # Track ball separately (obj_id = -1, -2, etc. or just keep list of ball centers)
-    # Actually, let's keep it simple: Optical Track ball as obj_id -1.
 
     for frame_idx, frame in read_segment(video_path, start_frame, end_frame, skip_frames):
         
@@ -395,9 +387,9 @@ def _segment_worker(args):
                     if color not in ("Unknown", "Mixed"):
                         player_colors[obj_id] = color
 
-            # Detect Ball
-            ball_boxes = detector.detect_ball(frame)
-            for i, b_box in enumerate(ball_boxes):
+            # Detect Ball — use raw bboxes for ROI tracker init
+            ball_boxes_raw = detector.detect_ball_raw(frame)
+            for i, b_box in enumerate(ball_boxes_raw):
                 # Use negative IDs for balls
                 tracker.add_tracker(frame, b_box, -1 - i)
                 
@@ -407,25 +399,24 @@ def _segment_worker(args):
             # ── Track using CSRT (Fast) ───────────────────────────────────
             updated_boxes = tracker.update(frame)
 
-        # ── Process Tracked Boxes ─────────────────────────────────────────
-        ball_centers = []
-        player_positions = {}
+        # ── Process Tracked Boxes → Primitives ────────────────────────────
+        balls = []
+        player_capsules = {}
         for obj_id, box in updated_boxes.items():
             if obj_id < 0:
-                # It's a ball
-                bx = (box[0] + box[2]) / 2
-                by = (box[1] + box[3]) / 2
-                ball_centers.append((bx, by))
+                # It's a ball → convert to Ball primitive
+                balls.append(bbox_to_ball(box[0], box[1], box[2], box[3]))
             else:
-                # It's a player
-                px = (box[0] + box[2]) / 2
-                py = box[3]
-                mx, my = geometry.pixel_to_meter(px, py)
-                metrics.update_position(obj_id, mx, my, frame_idx)
-                player_positions[obj_id] = (px, py, mx, my)
+                # It's a player → convert to PlayerCapsule primitive
+                capsule = bbox_to_player(box[0], box[1], box[2], box[3], obj_id=obj_id)
+                foot = capsule.ground_contact
+                mx, my = geometry.pixel_to_meter(foot.x, foot.y)
+                capsule.meter_pos = Point2D(mx, my)
+                metrics.update_position(obj_id, capsule.meter_pos, frame_idx)
+                player_capsules[obj_id] = capsule
 
         # ── Scoring ───────────────────────────────────────────────────────
-        shot_tracker.update(ball_centers, player_positions, frame_idx)
+        shot_tracker.update(balls, player_capsules, frame_idx)
 
     return {
         "player_metadata": player_metadata,
