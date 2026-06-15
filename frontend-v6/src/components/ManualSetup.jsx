@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { UploadCloud, Users, Play, Plus, X } from 'lucide-react';
+import { UploadCloud, Play, Plus, X } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = 'http://localhost:8000';
