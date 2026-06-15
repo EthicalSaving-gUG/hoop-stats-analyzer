@@ -1,4 +1,3 @@
-import numpy as np
 from .primitives import Point2D
 
 
