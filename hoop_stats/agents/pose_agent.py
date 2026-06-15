@@ -209,17 +209,7 @@ class PoseAnalysisAgent(BaseAgent):
             ]
         }
 
-        l_shoulder = landmarks[11]
-        r_shoulder = landmarks[12]
-        l_elbow = landmarks[13]
-        l_wrist = landmarks[15]
-        
-        l_hip = landmarks[23]
-        r_hip = landmarks[24]
-        l_knee = landmarks[25]
-        l_ankle = landmarks[27]
-        r_knee = landmarks[26]
-        r_ankle = landmarks[28]
+        l_shoulder, r_shoulder, l_elbow, l_wrist, l_hip, r_hip, l_knee, l_ankle, r_knee, r_ankle = self._extract_body_parts(landmarks)
         
         elbow_angle = calculate_angle(l_shoulder, l_elbow, l_wrist)
         self._active_shooter_stats["elbow_angle"] = round(elbow_angle, 1)
@@ -227,6 +217,32 @@ class PoseAnalysisAgent(BaseAgent):
         knee_angle = calculate_angle(l_hip, l_knee, l_ankle)
         self._active_shooter_stats["knee_angle"] = round(knee_angle, 1)
 
+        self._update_shooting_state(
+            l_shoulder, l_wrist, l_ankle, elbow_angle, knee_angle, frame_idx
+        )
+
+        # Generate high-fidelity simulated 3D surface points if DensePose is chosen
+        if self.pose_model == "densepose":
+            self._generate_densepose_mesh(landmarks, l_shoulder, r_shoulder, l_hip, r_hip, l_elbow, l_wrist, l_knee, r_knee, l_ankle, r_ankle, frame_idx)
+
+        gs.player_stats["biomechanics_live"] = self._active_shooter_stats
+
+    def _extract_body_parts(self, landmarks):
+        return (
+            landmarks[11], # l_shoulder
+            landmarks[12], # r_shoulder
+            landmarks[13], # l_elbow
+            landmarks[15], # l_wrist
+            landmarks[23], # l_hip
+            landmarks[24], # r_hip
+            landmarks[25], # l_knee
+            landmarks[27], # l_ankle
+            landmarks[26], # r_knee
+            landmarks[28]  # r_ankle
+        )
+
+    def _update_shooting_state(self, l_shoulder, l_wrist, l_ankle, elbow_angle, knee_angle, frame_idx):
+        gs = self.game_state
         is_arms_up = l_wrist.y < l_shoulder.y
         is_elbow_extended = elbow_angle > 140.0
         
@@ -252,49 +268,46 @@ class PoseAnalysisAgent(BaseAgent):
                 self._shooting_motion = False
                 self._active_shooter_stats["status"] = "Idle"
 
-        # Generate high-fidelity simulated 3D surface points if DensePose is chosen
-        if self.pose_model == "densepose":
-            dense_points = []
-            
-            def interpolate_segment(pt1, pt2, part_id, density=8, radius=0.03):
-                for i in range(density):
-                    t = i / density
-                    cx = pt1.x + t * (pt2.x - pt1.x)
-                    cy = pt1.y + t * (pt2.y - pt1.y)
-                    for j in range(3):
-                        angle = (j * 2 * math.pi) / 3 + (frame_idx * 0.1)
-                        rx = cx + math.cos(angle) * radius * 0.7
-                        ry = cy + math.sin(angle) * radius
-                        rz = math.sin(angle) * radius
-                        dense_points.append([round(rx, 4), round(ry, 4), round(rz, 4), part_id])
+    def _generate_densepose_mesh(self, landmarks, l_shoulder, r_shoulder, l_hip, r_hip, l_elbow, l_wrist, l_knee, r_knee, l_ankle, r_ankle, frame_idx):
+        dense_points = []
 
-            # Torso (ID 1, 2)
-            interpolate_segment(l_shoulder, r_shoulder, 2, density=6, radius=0.04)
-            interpolate_segment(l_shoulder, l_hip, 1, density=8, radius=0.05)
-            interpolate_segment(r_shoulder, r_hip, 1, density=8, radius=0.05)
-            interpolate_segment(l_hip, r_hip, 2, density=6, radius=0.04)
-            
-            # Arms (IDs 3, 4, 5, 6)
-            interpolate_segment(l_shoulder, l_elbow, 3, density=6, radius=0.02)
-            interpolate_segment(l_elbow, l_wrist, 4, density=6, radius=0.015)
-            interpolate_segment(r_shoulder, landmarks[14], 5, density=6, radius=0.02)
-            interpolate_segment(landmarks[14], landmarks[16], 6, density=6, radius=0.015)
+        def interpolate_segment(pt1, pt2, part_id, density=8, radius=0.03):
+            for i in range(density):
+                t = i / density
+                cx = pt1.x + t * (pt2.x - pt1.x)
+                cy = pt1.y + t * (pt2.y - pt1.y)
+                for j in range(3):
+                    angle = (j * 2 * math.pi) / 3 + (frame_idx * 0.1)
+                    rx = cx + math.cos(angle) * radius * 0.7
+                    ry = cy + math.sin(angle) * radius
+                    rz = math.sin(angle) * radius
+                    dense_points.append([round(rx, 4), round(ry, 4), round(rz, 4), part_id])
 
-            # Legs (IDs 7, 8, 9, 10)
-            interpolate_segment(l_hip, l_knee, 7, density=8, radius=0.03)
-            interpolate_segment(l_knee, l_ankle, 8, density=8, radius=0.025)
-            interpolate_segment(r_hip, r_knee, 9, density=8, radius=0.03)
-            interpolate_segment(r_knee, r_ankle, 10, density=8, radius=0.025)
+        # Torso (ID 1, 2)
+        interpolate_segment(l_shoulder, r_shoulder, 2, density=6, radius=0.04)
+        interpolate_segment(l_shoulder, l_hip, 1, density=8, radius=0.05)
+        interpolate_segment(r_shoulder, r_hip, 1, density=8, radius=0.05)
+        interpolate_segment(l_hip, r_hip, 2, density=6, radius=0.04)
 
-            # Head (ID 11)
-            head = landmarks[0]
-            for i in range(12):
-                angle = (i * 2 * math.pi) / 12 + (frame_idx * 0.05)
-                rx = head.x + math.cos(angle) * 0.025
-                ry = head.y + math.sin(angle) * 0.03
-                rz = math.sin(angle) * 0.025
-                dense_points.append([round(rx, 4), round(ry, 4), round(rz, 4), 11])
+        # Arms (IDs 3, 4, 5, 6)
+        interpolate_segment(l_shoulder, l_elbow, 3, density=6, radius=0.02)
+        interpolate_segment(l_elbow, l_wrist, 4, density=6, radius=0.015)
+        interpolate_segment(r_shoulder, landmarks[14], 5, density=6, radius=0.02)
+        interpolate_segment(landmarks[14], landmarks[16], 6, density=6, radius=0.015)
 
-            self._active_shooter_stats["surface_mesh"] = dense_points
+        # Legs (IDs 7, 8, 9, 10)
+        interpolate_segment(l_hip, l_knee, 7, density=8, radius=0.03)
+        interpolate_segment(l_knee, l_ankle, 8, density=8, radius=0.025)
+        interpolate_segment(r_hip, r_knee, 9, density=8, radius=0.03)
+        interpolate_segment(r_knee, r_ankle, 10, density=8, radius=0.025)
 
-        gs.player_stats["biomechanics_live"] = self._active_shooter_stats
+        # Head (ID 11)
+        head = landmarks[0]
+        for i in range(12):
+            angle = (i * 2 * math.pi) / 12 + (frame_idx * 0.05)
+            rx = head.x + math.cos(angle) * 0.025
+            ry = head.y + math.sin(angle) * 0.03
+            rz = math.sin(angle) * 0.025
+            dense_points.append([round(rx, 4), round(ry, 4), round(rz, 4), 11])
+
+        self._active_shooter_stats["surface_mesh"] = dense_points
