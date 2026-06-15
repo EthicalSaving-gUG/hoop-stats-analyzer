@@ -5,6 +5,7 @@ import uvicorn
 import shutil
 import os
 import uuid
+import aiofiles
 from hoop_stats.analyzer import BasketballAnalyzer
 from hoop_stats.primitive_renderer import PrimitiveRenderer
 from hoop_stats.game_state import GameState
@@ -63,8 +64,9 @@ async def analyze_file(background_tasks: BackgroundTasks, file: UploadFile = Fil
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
     file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    async with aiofiles.open(file_path, "wb") as out_file:
+        while content := await file.read(1024 * 1024):  # read in 1MB chunks
+            await out_file.write(content)
     output_name = f"results/stats_{file.filename.split('.')[0]}_{job_id[:8]}"
     calibration = {
         "video": [[100, 100], [1100, 100], [100, 900], [1100, 900]],
@@ -83,8 +85,9 @@ async def visualize_file(
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
     file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    async with aiofiles.open(file_path, "wb") as out_file:
+        while content := await file.read(1024 * 1024):
+            await out_file.write(content)
     output_path = f"results/viz_{file.filename.split('.')[0]}_{job_id[:8]}.mp4"
     background_tasks.add_task(run_background_visualize, job_id, file_path, output_path, mode)
     return {"status": "success", "job_id": job_id}
@@ -109,8 +112,9 @@ async def export3d_file(
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
     file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    async with aiofiles.open(file_path, "wb") as out_file:
+        while content := await file.read(1024 * 1024):
+            await out_file.write(content)
     output_path = f"results/vectors3d_{file.filename.split('.')[0]}_{job_id[:8]}.json"
     background_tasks.add_task(run_background_export3d, job_id, file_path, output_path)
     return {"status": "success", "job_id": job_id}
@@ -302,8 +306,9 @@ async def manual_export():
 @app.post("/manual/upload-video")
 async def manual_upload_video(file: UploadFile = File(...)):
     file_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    async with aiofiles.open(file_path, "wb") as out_file:
+        while content := await file.read(1024 * 1024):
+            await out_file.write(content)
     return {"video_url": f"http://localhost:8000/uploads/{file.filename}"}
 
 # ── Legacy stream endpoint ──────────────────────────────────────────────────
