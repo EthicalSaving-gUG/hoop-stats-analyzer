@@ -188,7 +188,7 @@ class BasketballAnalyzer:
                     summary[team]["FGA"] += 1
                     if shot["status"] == "made":
                         summary[team]["FGM"] += 1
-                    
+
                     if shot["zone"] in ("three_point", "3PT Wing"):
                         summary[team]["3PA"] += 1
                         if shot["status"] == "made":
@@ -199,7 +199,7 @@ class BasketballAnalyzer:
             accels = s["avg_max_accel"]
             s["avg_max_speed"] = float(round(sum(speeds)/len(speeds), 2)) if speeds else 0.0
             s["avg_max_accel"] = float(round(sum(accels)/len(accels), 2)) if accels else 0.0
-            
+
             fga = s["FGA"]
             fgm = s["FGM"]
             tpm = s["3PM"]
@@ -209,26 +209,7 @@ class BasketballAnalyzer:
         return summary
 
     # ─────────────────────────────────────────────────────────────────────────
-    def run_fast(
-        self,
-        court_calibration_points=None,
-        max_frames=None,
-        skip_frames=3,
-        n_workers=None,
-        yolo_interval=30,
-        progress_callback=None
-    ):
-        """
-        Accelerated pipeline that splits the video into segments processed in 
-        parallel worker processes using Region-Of-Interest (ROI) optical tracking.
-
-        Parameters
-        ----------
-        n_workers : int, optional
-            Number of parallel processes. Defaults to min(4, cpu_count()).
-        yolo_interval : int
-            Run heavy YOLO detection every N frames to refresh the optical tracker.
-        """
+    def _initialize_run_fast(self, court_calibration_points, max_frames, skip_frames, n_workers, yolo_interval):
         info = get_video_info(self.video_path)
         fps = info["fps"]
         fw  = info["width"]
@@ -267,7 +248,9 @@ class BasketballAnalyzer:
             for (start, end) in segment_ranges
         ]
 
-        # ── Run segments in parallel processes ─────────────────────────────
+        return n_workers, worker_args
+
+    def _execute_parallel_workers(self, n_workers, worker_args, progress_callback):
         ctx = mp.get_context("spawn")  # spawn is safe on Windows
         partial_results = []
         with ctx.Pool(processes=n_workers) as pool:
@@ -278,8 +261,9 @@ class BasketballAnalyzer:
                 if progress_callback:
                     pct = int((completed / len(worker_args)) * 95) # Leave 5% for finalize
                     progress_callback(pct, f"Processed segment {completed}/{len(worker_args)}")
+        return partial_results
 
-        # ── Merge partial results into main state ───────────────────────────
+    def _merge_partial_results(self, partial_results):
         for partial in partial_results:
             # Merge player metadata (jersey, colors)
             for pid, meta in partial["player_metadata"].items():
@@ -313,10 +297,40 @@ class BasketballAnalyzer:
             # Merge scoring (sum per hoop zone)
             for zi, pts in enumerate(partial["scores"]):
                 self.shot_tracker.scores[zi] += pts
-            
+
             # Merge completed shots
             if "shots" in partial:
                 self.shot_tracker.completed_shots.extend(partial["shots"])
+
+    def run_fast(
+        self,
+        court_calibration_points=None,
+        max_frames=None,
+        skip_frames=3,
+        n_workers=None,
+        yolo_interval=30,
+        progress_callback=None
+    ):
+        """
+        Accelerated pipeline that splits the video into segments processed in
+        parallel worker processes using Region-Of-Interest (ROI) optical tracking.
+
+        Parameters
+        ----------
+        n_workers : int, optional
+            Number of parallel processes. Defaults to min(4, cpu_count()).
+        yolo_interval : int
+            Run heavy YOLO detection every N frames to refresh the optical tracker.
+        """
+        n_workers, worker_args = self._initialize_run_fast(
+            court_calibration_points, max_frames, skip_frames, n_workers, yolo_interval
+        )
+
+        # ── Run segments in parallel processes ─────────────────────────────
+        partial_results = self._execute_parallel_workers(n_workers, worker_args, progress_callback)
+
+        # ── Merge partial results into main state ───────────────────────────
+        self._merge_partial_results(partial_results)
 
         self._finalize_stats()
 
@@ -356,23 +370,23 @@ def _segment_worker(args):
     player_colors   = {}
 
     for frame_idx, frame in read_segment(video_path, start_frame, end_frame, skip_frames):
-        
+
         # ── Detect using YOLO (periodically) ──────────────────────────────
         if frame_idx % yolo_interval == 0 or tracker.active_count == 0:
             tracker.clear()
-            
+
             # Detect Players
             det_results = detector.model.track(
                 frame, persist=True, classes=[0], verbose=False, conf=0.35, tracker="botsort.yaml"
             )
-            
+
             if det_results[0].boxes.id is not None:
                 boxes = det_results[0].boxes.xyxy.cpu().numpy()
                 ids   = det_results[0].boxes.id.cpu().numpy().astype(int)
 
                 for box, obj_id in zip(boxes, ids):
                     tracker.add_tracker(frame, box, obj_id)
-                    
+
                     if obj_id not in player_metadata:
                         player_metadata[obj_id] = {"jersey": "Unknown", "team": "TBD"}
 
@@ -392,9 +406,9 @@ def _segment_worker(args):
             for i, b_box in enumerate(ball_boxes_raw):
                 # Use negative IDs for balls
                 tracker.add_tracker(frame, b_box, -1 - i)
-                
+
             updated_boxes = tracker.update(frame) # init first frame outputs
-            
+
         else:
             # ── Track using CSRT (Fast) ───────────────────────────────────
             updated_boxes = tracker.update(frame)
