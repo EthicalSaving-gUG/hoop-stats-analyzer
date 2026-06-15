@@ -1,5 +1,15 @@
 import numpy as np
+from dataclasses import dataclass
+from typing import Optional, Any
 from .primitives import Ball, Rim, PlayerCapsule, Point2D, rim_contains_ball
+
+@dataclass
+class ShotTrackerConfig:
+    court_geometry: Optional[Any] = None
+    cooldown_frames: int = 45
+    halftime_frame: Optional[int] = None
+    fps: float = 30.0
+    quarter_length_min: float = 10.0
 
 
 class ShotTracker:
@@ -18,12 +28,14 @@ class ShotTracker:
     maintains a team→basket mapping that can be flipped via swap_sides().
     Team scores are accumulated correctly across the whole game.
     """
-    def __init__(self, frame_w, frame_h, court_geometry=None, cooldown_frames=45,
-                 halftime_frame=None, fps=30.0, quarter_length_min=10.0):
+    def __init__(self, frame_w, frame_h, config: Optional[ShotTrackerConfig] = None):
         self.frame_w = frame_w
         self.frame_h = frame_h
-        self.geometry = court_geometry
-        self.cooldown_frames = cooldown_frames
+
+        config = config or ShotTrackerConfig()
+
+        self.geometry = config.court_geometry
+        self.cooldown_frames = config.cooldown_frames
 
         # Rim circles — initialized with fallback positions,
         # updated dynamically by RimDetector when available
@@ -47,9 +59,9 @@ class ShotTracker:
         self._sides_swapped = False
 
         # Halftime auto-detection
-        self._halftime_frame = halftime_frame  # user-provided frame, or None
-        self._fps = fps
-        self._quarter_length_min = quarter_length_min
+        self._halftime_frame = config.halftime_frame  # user-provided frame, or None
+        self._fps = config.fps
+        self._quarter_length_min = config.quarter_length_min
         self._halftime_triggered = False
 
         # Ball trajectory tracking

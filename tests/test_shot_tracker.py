@@ -1,5 +1,5 @@
 import pytest
-from hoop_stats.shot_tracker import ShotTracker
+from hoop_stats.shot_tracker import ShotTracker, ShotTrackerConfig
 from hoop_stats.primitives import Ball, Point2D, PlayerCapsule
 
 @pytest.fixture
@@ -132,7 +132,7 @@ class TestHalftimeSwap:
 
     def test_auto_halftime_trigger(self):
         """Halftime should auto-trigger at the configured frame."""
-        detector = ShotTracker(frame_w=1280, frame_h=720, halftime_frame=100)
+        detector = ShotTracker(frame_w=1280, frame_h=720, config=ShotTrackerConfig(halftime_frame=100))
         assert detector._halftime_triggered is False
         
         # Process frames up to halftime
@@ -153,7 +153,7 @@ class TestHalftimeSwap:
         Total should be 2 home + 2 away.
         """
         fw, fh = 1280, 720
-        detector = ShotTracker(fw, fh, halftime_frame=50)
+        detector = ShotTracker(fw, fh, config=ShotTrackerConfig(halftime_frame=50))
         
         # --- 1st half: score into right basket (home scores) ---
         player_capsules = {1: _make_capsule(500, 500, 5.0, 5.0, obj_id=1)}
