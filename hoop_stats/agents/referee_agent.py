@@ -4,6 +4,9 @@ Watches for rule violations and flags warnings.
 Supports both FIBA 2024 and NBA 2024-25 rule sets.
 """
 from .base_agent import BaseAgent
+from ..detector import HoopDetector
+from ..geometry import CourtGeometry
+import time
 
 
 class RefereeAgent(BaseAgent):
@@ -15,6 +18,14 @@ class RefereeAgent(BaseAgent):
         self._alerted_violations = set()
         self._whistle_count = 0
         self._rules = game_state.rules  # FIBA or NBA
+        self._paint_times = {}
+        self._detector = None
+        self._geometry = None
+
+    def on_start(self):
+        super().on_start()
+        self._detector = HoopDetector()
+        self._geometry = CourtGeometry()
 
     def on_whistle(self):
         """Whistle detected → log referee whistle event."""
@@ -72,12 +83,67 @@ class RefereeAgent(BaseAgent):
     def _check_defensive_three_seconds(self, frame, frame_idx):
         """
         NBA Rule: Defensive player cannot remain in the paint for > 3 seconds
-        without actively guarding an opponent. (Simplified detection placeholder)
+        without actively guarding an opponent. (Simplified detection)
         """
-        # Full implementation would track each defender's time in the paint zone
-        # using player position data from the detector.
-        # For now, this is a placeholder that can be extended.
-        pass
+        if not self.game_state.game_clock_running:
+            self._paint_times.clear()
+            return
+
+        # Use the video/game clock tick rate or frame index to calculate the duration
+        # instead of wall-clock time which can vary depending on processing speed.
+        now = frame_idx
+        fps = getattr(self.game_state, "fps", getattr(self.stream_manager, "fps", 30))
+        # fallback if we don't have exact fps. The tick rate is 5 fps by default
+        tick_rate = self.tick_rate if hasattr(self, "tick_rate") else 5.0
+        time_per_tick = 1.0 / tick_rate
+
+        det_results = self._detector.model.track(
+            frame, persist=True, classes=[0], verbose=False,
+            conf=0.35, tracker="botsort.yaml"
+        )
+
+        current_players_in_paint = set()
+
+        if det_results[0].boxes.id is not None:
+            boxes = det_results[0].boxes.xyxy.cpu().numpy()
+            ids = det_results[0].boxes.id.cpu().numpy().astype(int)
+
+            for obj_id, box in zip(ids, boxes):
+                pid = str(obj_id)
+
+                # Bottom center (foot position)
+                cx = (box[0] + box[2]) / 2
+                cy = box[3]
+
+                mx, my = self._geometry.pixel_to_meter(cx, cy)
+                zone = self._geometry.get_zone(mx, my)
+
+                if zone == "paint":
+                    current_players_in_paint.add(pid)
+                    if pid not in self._paint_times:
+                        self._paint_times[pid] = now
+                    else:
+                        duration = (now - self._paint_times[pid]) * time_per_tick
+                        alert_key = f"def_3sec_{pid}_{int(now)}"
+                        if duration > 3.0 and alert_key not in self._alerted_violations:
+                            # Simplified: We don't know who is on defense right now
+                            # without advanced ball possession/team association.
+                            # So we flag it as a generic 3-second violation.
+                            self._alerted_violations.add(alert_key)
+                            self.game_state.append_event(
+                                self.AGENT_NAME, "DEFENSIVE_3_SECONDS",
+                                {"player_id": pid, "duration": round(duration, 1),
+                                 "ruleset": self._rules.name},
+                                frame_idx
+                            )
+                            # Reset time so we don't spam
+                            self._paint_times[pid] = now
+
+        # Remove players who left the paint
+        for pid in list(self._paint_times.keys()):
+            if pid not in current_players_in_paint:
+                del self._paint_times[pid]
+
 
     def _check_unsportsmanlike_disqualification(self, frame_idx):
         """

@@ -31,9 +31,12 @@ class MultiRoiTracker:
         
         # Create a new CSRT Tracker (highly accurate for translation/scale)
         try:
-            tracker = cv2.legacy.TrackerCSRT_create()
+            tracker = cv2.TrackerCSRT_create()
         except AttributeError:
-            tracker = cv2.TrackerCSRT_create()  # Fallback for some OpenCV versions
+            try:
+                tracker = cv2.legacy.TrackerCSRT_create()  # Fallback for some OpenCV versions
+            except AttributeError:
+                tracker = cv2.legacy.TrackerCSRT_create() # just fail if none exist
             
         # init() in python bindings may return None or True depending on version
         res = tracker.init(frame, bbox_xywh)
