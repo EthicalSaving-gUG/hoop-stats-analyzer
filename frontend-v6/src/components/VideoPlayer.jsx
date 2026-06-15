@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, FastForward, Maximize, Settings } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, FastForward, Maximize } from 'lucide-react';
 
 const VideoPlayer = ({ videoUrl }) => {
     const videoRef = useRef(null);
