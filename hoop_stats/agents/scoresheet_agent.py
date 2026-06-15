@@ -24,14 +24,7 @@ class ScoresheetAgent(BaseAgent):
     def on_start(self):
         self._detector = HoopDetector()
 
-    def process_frame(self, camera_id, frame, frame_idx):
-        h, w = frame.shape[:2]
-
-        # Initialize shot tracker on first frame
-        if self._shot_tracker is None:
-            self._shot_tracker = ShotTracker(w, h)
-
-        # Detect players for substitution tracking
+    def _detect_and_register_players(self, frame):
         det_results = self._detector.model.track(
             frame, persist=True, classes=[0], verbose=False,
             conf=0.35, tracker="botsort.yaml"
@@ -63,8 +56,9 @@ class ScoresheetAgent(BaseAgent):
                     }
         # Update GameState active players
         self.game_state.active_players = current_players
+        return current_players, player_positions
 
-        # Track substitutions
+    def _track_substitutions(self, current_players, frame_idx):
         new_in = current_players - self._known_players
         new_out = self._known_players - current_players
 
@@ -87,7 +81,7 @@ class ScoresheetAgent(BaseAgent):
 
         self._known_players = current_players
 
-        # Detect ball + update shot tracker
+    def _detect_ball_and_update_shots(self, frame, player_positions, frame_idx):
         ball_boxes = self._detector.detect_ball(frame)
         ball_centers = []
         for b in ball_boxes:
@@ -106,6 +100,22 @@ class ScoresheetAgent(BaseAgent):
                 self.AGENT_NAME, "SCORE",
                 {"team": team, "points": points, "zone": zone_idx}, frame_idx
             )
+
+    def process_frame(self, camera_id, frame, frame_idx):
+        h, w = frame.shape[:2]
+
+        # Initialize shot tracker on first frame
+        if self._shot_tracker is None:
+            self._shot_tracker = ShotTracker(w, h)
+
+        # Detect players for substitution tracking
+        current_players, player_positions = self._detect_and_register_players(frame)
+
+        # Track substitutions
+        self._track_substitutions(current_players, frame_idx)
+
+        # Detect ball + update shot tracker
+        self._detect_ball_and_update_shots(frame, player_positions, frame_idx)
 
     def on_stop(self):
         """Generate the Kampfbericht JSON on stop."""
