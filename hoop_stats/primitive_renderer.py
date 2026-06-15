@@ -541,12 +541,11 @@ class PrimitiveRenderer:
         self.court_lines.clear()
         self._build_default_court()
 
-            try:
-                import torch
-                device_label = f"GPU ({torch.cuda.get_device_name(0)})"
-            except Exception:
-                device_label = "GPU (CUDA)"
-
+        try:
+            import torch
+            device_label = f"GPU ({torch.cuda.get_device_name(0)})"
+        except Exception:
+            device_label = "GPU (CUDA)"
         print(f"  ⚡ Inference device: {device_label}")
         print(f"  📹 {fw}x{fh} @ {fps:.1f}fps, {total} total frames")
         print(f"  🎯 Processing every {skip_frames}th frame → ~{frames_to_process} frames")

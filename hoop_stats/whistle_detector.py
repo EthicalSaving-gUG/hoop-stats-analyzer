@@ -6,37 +6,44 @@ Referee whistles typically produce a strong signal in the 2000-4500 Hz band.
 """
 import numpy as np
 from collections import deque
+from dataclasses import dataclass
+
+
+@dataclass
+class WhistleDetectorConfig:
+    """Configuration for the WhistleDetector."""
+    sample_rate: int = 44100
+    min_freq: float = 2000.0
+    max_freq: float = 4500.0
+    energy_threshold: float = 0.15
+    peak_ratio_threshold: float = 3.0
+    cooldown_seconds: float = 1.5
 
 
 class WhistleDetector:
     """
     Analyses audio chunks for high-frequency whistle peaks.
-    
+
     Usage:
-        wd = WhistleDetector(sample_rate=44100)
+        config = WhistleDetectorConfig(sample_rate=44100)
+        wd = WhistleDetector(config)
         is_whistle = wd.detect(audio_chunk)  # np.ndarray of float32 samples
     """
 
-    def __init__(self, sample_rate: int = 44100,
-                 min_freq: float = 2000.0,
-                 max_freq: float = 4500.0,
-                 energy_threshold: float = 0.15,
-                 peak_ratio_threshold: float = 3.0,
-                 cooldown_seconds: float = 1.5):
+    def __init__(self, config: WhistleDetectorConfig = None):
         """
         Args:
-            sample_rate: Audio sample rate in Hz.
-            min_freq / max_freq: Frequency band for whistle detection.
-            energy_threshold: Minimum total energy to consider (avoids silence triggers).
-            peak_ratio_threshold: How much louder the whistle band must be vs. average.
-            cooldown_seconds: Minimum gap between consecutive whistle events.
+            config: Configuration settings for whistle detection.
         """
-        self.sample_rate = sample_rate
-        self.min_freq = min_freq
-        self.max_freq = max_freq
-        self.energy_threshold = energy_threshold
-        self.peak_ratio_threshold = peak_ratio_threshold
-        self.cooldown_samples = int(cooldown_seconds * sample_rate)
+        if config is None:
+            config = WhistleDetectorConfig()
+
+        self.sample_rate = config.sample_rate
+        self.min_freq = config.min_freq
+        self.max_freq = config.max_freq
+        self.energy_threshold = config.energy_threshold
+        self.peak_ratio_threshold = config.peak_ratio_threshold
+        self.cooldown_samples = int(config.cooldown_seconds * config.sample_rate)
 
         self._samples_since_last = self.cooldown_samples  # allow immediate first detect
         self._history = deque(maxlen=5)  # rolling confidence scores
@@ -44,7 +51,7 @@ class WhistleDetector:
     def detect(self, audio_chunk: np.ndarray) -> bool:
         """
         Analyse an audio chunk and return True if a whistle is detected.
-        
+
         Args:
             audio_chunk: 1D numpy array of float32 audio samples (mono).
         Returns:
