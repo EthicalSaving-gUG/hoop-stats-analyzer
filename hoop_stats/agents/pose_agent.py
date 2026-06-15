@@ -150,15 +150,32 @@ class PoseAnalysisAgent(BaseAgent):
             uv = pred_densepose.uv
             
             h, w = labels.shape
-            dense_points = []
-            for y in range(0, h, 6): # Downsample for bandwidth efficiency
-                for x in range(0, w, 6):
-                    label_val = int(labels[y, x])
-                    if label_val > 0:
-                        norm_x = (bbox[0] + (x / w) * (bbox[2] - bbox[0])) / frame.shape[1]
-                        norm_y = (bbox[1] + (y / h) * (bbox[3] - bbox[1])) / frame.shape[0]
-                        z = 0.05 * math.sin(label_val)
-                        dense_points.append([round(norm_x, 4), round(norm_y, 4), round(z, 4), label_val])
+
+            # Vectorized downsampling for performance efficiency
+            if hasattr(labels, 'numpy'):
+                labels_np = labels.numpy()
+            else:
+                labels_np = labels
+
+            labels_downsampled = labels_np[::6, ::6]
+            mask = labels_downsampled > 0
+
+            y_indices = np.arange(0, h, 6)
+            x_indices = np.arange(0, w, 6)
+            x_grid, y_grid = np.meshgrid(x_indices, y_indices)
+
+            valid_x = x_grid[mask]
+            valid_y = y_grid[mask]
+            valid_labels = labels_downsampled[mask].astype(int)
+
+            norm_x = (bbox[0] + (valid_x / w) * (bbox[2] - bbox[0])) / frame.shape[1]
+            norm_y = (bbox[1] + (valid_y / h) * (bbox[3] - bbox[1])) / frame.shape[0]
+            z = 0.05 * np.sin(valid_labels)
+
+            dense_points = [
+                [round(float(nx), 4), round(float(ny), 4), round(float(nz), 4), int(l)]
+                for nx, ny, nz, l in zip(norm_x, norm_y, z, valid_labels)
+            ]
             
             # Estimate angles based on frame index variation for demo consistency
             elbow_angle = 90.0 + math.sin(frame_idx * 0.15) * 60.0
