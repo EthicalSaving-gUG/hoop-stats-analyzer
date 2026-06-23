@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Undo2, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import axios from 'axios';
 import VideoPlayer from './VideoPlayer';
-
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from '../config';
 
 const STAT_FIELDS = [
     { key: 'points_2pt', label: '2PT', short: '2P' },

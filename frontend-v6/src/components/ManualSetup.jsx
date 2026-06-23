@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { UploadCloud, Users, Play, Plus, X } from 'lucide-react';
 import axios from 'axios';
-
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from '../config';
 
 const ManualSetup = ({ onStart, onBack }) => {
     const [teamHome, setTeamHome] = useState('Team A');
@@ -82,7 +81,7 @@ const ManualSetup = ({ onStart, onBack }) => {
                     
                     <div className="space-y-3 mb-4">
                         <h3 className="text-sm text-slate-400 font-semibold border-b border-slate-700 pb-2">Spieler</h3>
-                        {players.filter(p => p.team === 'home').map((p, idx) => (
+                        {players.filter(p => p.team === 'home').map((p) => (
                             <div key={p.id} className="flex gap-2 items-center">
                                 <input value={p.jersey} onChange={(e) => updatePlayer(p.id, 'jersey', e.target.value)} placeholder="#"
                                     className="w-12 bg-slate-800 border border-slate-700 rounded text-center px-1 py-1 text-sm focus:border-blue-500 outline-none" />
@@ -107,7 +106,7 @@ const ManualSetup = ({ onStart, onBack }) => {
                     
                     <div className="space-y-3 mb-4">
                         <h3 className="text-sm text-slate-400 font-semibold border-b border-slate-700 pb-2">Spieler</h3>
-                        {players.filter(p => p.team === 'away').map((p, idx) => (
+                        {players.filter(p => p.team === 'away').map((p) => (
                             <div key={p.id} className="flex gap-2 items-center">
                                 <input value={p.jersey} onChange={(e) => updatePlayer(p.id, 'jersey', e.target.value)} placeholder="#"
                                     className="w-12 bg-slate-800 border border-slate-700 rounded text-center px-1 py-1 text-sm focus:border-emerald-500 outline-none" />

@@ -5,6 +5,7 @@ provides the latest frame to any agent that requests it.
 Also supports audio capture for whistle detection.
 """
 import cv2
+import os
 import subprocess
 import threading
 import time
@@ -26,36 +27,53 @@ class CameraReader(threading.Thread):
         self._fps: float = 30.0
         self._width: int = 0
         self._height: int = 0
+        self._connected = False
 
     def run(self):
         cap = cv2.VideoCapture(self.source)
         if not cap.isOpened():
             print(f"[CameraReader:{self.camera_id}] ERROR: Cannot open {self.source}")
+            self._connected = False
             return
 
         self._fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         self._width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self._height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self._running = True
+        self._connected = True
 
         print(f"[CameraReader:{self.camera_id}] Opened {self.source} "
               f"({self._width}x{self._height} @ {self._fps:.1f}fps)")
 
+        is_file = isinstance(self.source, str) and os.path.exists(self.source)
+        frame_delay = 1.0 / self._fps if self._fps > 0 else 0.033
+
         while self._running:
+            t0 = time.time()
             ret, frame = cap.read()
             if not ret:
-                if isinstance(self.source, str) and not self.source.startswith("rtsp"):
+                if is_file:
                     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     continue
                 else:
+                    self._connected = False
                     time.sleep(1.0)
                     cap.release()
                     cap = cv2.VideoCapture(self.source)
+                    if cap.isOpened():
+                        self._connected = True
                     continue
 
+            self._connected = True
             with self._lock:
                 self._frame = frame
                 self._frame_idx += 1
+
+            if is_file:
+                elapsed = time.time() - t0
+                sleep_time = frame_delay - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
 
         cap.release()
 
@@ -228,5 +246,6 @@ class StreamManager:
             "source": str(reader.source),
             "fps": reader.fps,
             "resolution": reader.resolution,
+            "connected": reader._connected,
         }
 

@@ -12,6 +12,7 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+*.log
 
 # User data
 uploads/
@@ -27,3 +28,6 @@ Thumbs.db
 *.pt
 node_modules/
 output_stats.json
+models/
+runs/
+*_openvino_model/

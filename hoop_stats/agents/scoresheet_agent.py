@@ -9,6 +9,8 @@ import os
 from .base_agent import BaseAgent
 from ..detector import HoopDetector
 from ..shot_tracker import ShotTracker
+from ..geometry import CourtGeometry
+from ..primitives import bbox_to_player, Point2D
 
 
 class ScoresheetAgent(BaseAgent):
@@ -17,19 +19,22 @@ class ScoresheetAgent(BaseAgent):
     def __init__(self, game_state, stream_manager, camera_ids=None, audio_ids=None, **kwargs):
         super().__init__(game_state, stream_manager, camera_ids, audio_ids, tick_rate=10, **kwargs)
         self._detector = None
+        self._geometry = None
         self._shot_tracker = None
         self._last_event_count = 0
         self._known_players = set()
+        self._fused_players = {}
 
     def on_start(self):
         self._detector = HoopDetector()
+        self._geometry = CourtGeometry()
 
     def process_frame(self, camera_id, frame, frame_idx):
         h, w = frame.shape[:2]
 
         # Initialize shot tracker on first frame
         if self._shot_tracker is None:
-            self._shot_tracker = ShotTracker(w, h)
+            self._shot_tracker = ShotTracker(w, h, court_geometry=self._geometry)
 
         # Detect players for substitution tracking
         det_results = self._detector.model.track(
@@ -37,7 +42,7 @@ class ScoresheetAgent(BaseAgent):
             conf=0.35, tracker="botsort.yaml"
         )
 
-        player_positions = {}
+        player_capsules = {}
         current_players = set()
 
         if det_results[0].boxes.id is not None:
@@ -45,10 +50,47 @@ class ScoresheetAgent(BaseAgent):
             ids = det_results[0].boxes.id.cpu().numpy().astype(int)
 
             for obj_id, box in zip(ids, boxes):
-                pid = str(obj_id)
-                cx = (box[0] + box[2]) / 2
-                cy = (box[1] + box[3]) / 2
-                player_positions[obj_id] = (cx, cy, cx, cy)
+                # Construct proper PlayerCapsule
+                capsule = bbox_to_player(box[0], box[1], box[2], box[3], obj_id=obj_id)
+                
+                # Transform coordinates to real-world meters
+                foot = capsule.ground_contact
+                mx, my = self._geometry.pixel_to_meter(foot.x, foot.y)
+                
+                # Spatial Fusion Matcher
+                matched_global_id = None
+                min_dist = float('inf')
+                for gid, data in self._fused_players.items():
+                    gx, gy = data["pos"]
+                    dist = ((mx - gx)**2 + (my - gy)**2)**0.5
+                    if dist < 1.5 and dist < min_dist:
+                        min_dist = dist
+                        matched_global_id = gid
+                
+                if matched_global_id is not None:
+                    # Update existing global player with alpha smoothing (spatial moving average)
+                    alpha = 0.3
+                    gx, gy = self._fused_players[matched_global_id]["pos"]
+                    new_x = (1 - alpha) * gx + alpha * mx
+                    new_y = (1 - alpha) * gy + alpha * my
+                    self._fused_players[matched_global_id]["pos"] = [new_x, new_y]
+                    self._fused_players[matched_global_id]["last_update"] = frame_idx
+                    self._fused_players[matched_global_id]["local_ids"][camera_id] = obj_id
+                    global_id = matched_global_id
+                else:
+                    # Create new global player (starting from 1000 to avoid conflicting with YOLO ids)
+                    global_id = 1000 + len(self._fused_players)
+                    self._fused_players[global_id] = {
+                        "pos": [mx, my],
+                        "last_update": frame_idx,
+                        "local_ids": {camera_id: obj_id}
+                    }
+                
+                capsule.obj_id = global_id
+                capsule.meter_pos = Point2D(self._fused_players[global_id]["pos"][0], self._fused_players[global_id]["pos"][1])
+                
+                player_capsules[global_id] = capsule
+                pid = str(global_id)
                 current_players.add(pid)
 
                 # Register new players
@@ -61,6 +103,13 @@ class ScoresheetAgent(BaseAgent):
                         "fg_made": 0,
                         "fg_att": 0,
                     }
+
+            # Prune old fused players (not updated in 150 frames)
+            self._fused_players = {
+                gid: data for gid, data in self._fused_players.items()
+                if frame_idx - data["last_update"] < 150
+            }
+
         # Update GameState active players
         self.game_state.active_players = current_players
 
@@ -87,25 +136,67 @@ class ScoresheetAgent(BaseAgent):
 
         self._known_players = current_players
 
-        # Detect ball + update shot tracker
+        # Detect ball
         ball_boxes = self._detector.detect_ball(frame)
-        ball_centers = []
-        for b in ball_boxes:
-            bx = (b[0] + b[2]) / 2
-            by = (b[1] + b[3]) / 2
-            ball_centers.append((bx, by))
+        ball_primitives = []
+        for ball in ball_boxes:
+            # Map ball position to real-world meters
+            mx, my = self._geometry.pixel_to_meter(ball.center.x, ball.center.y)
+            ball.meter_pos = Point2D(mx, my)
+            ball_primitives.append(ball)
 
-        events = self._shot_tracker.update(ball_centers, player_positions, frame_idx)
+        # Update court tracking telemetry in GameState
+        with self.game_state._lock:
+            player_positions = {}
+            for pid, cap in player_capsules.items():
+                team = self.game_state.player_stats.get(str(pid), {}).get("team", "Unknown")
+                if cap.meter_pos:
+                    player_positions[str(pid)] = {
+                        "team": team,
+                        "pos": [round(cap.meter_pos.x, 2), round(cap.meter_pos.y, 2)]
+                    }
+            self.game_state.court_tracking["players"] = player_positions
 
-        # Record scores
-        for (zone_idx, score) in events:
-            team = self.game_state.possession or "unknown"
-            points = 2  # simplified; 3pt detection would need zone info
-            self.game_state.add_score(team, points)
-            self.game_state.append_event(
-                self.AGENT_NAME, "SCORE",
-                {"team": team, "points": points, "zone": zone_idx}, frame_idx
-            )
+            if ball_primitives and ball_primitives[0].meter_pos:
+                b_pos = ball_primitives[0].meter_pos
+                self.game_state.court_tracking["ball"] = [round(b_pos.x, 2), round(b_pos.y, 2)]
+            else:
+                self.game_state.court_tracking["ball"] = None
+
+        # Get team assignments for shot tracker to calculate defender distance
+        player_teams = {
+            str(pid): self.game_state.player_stats.get(str(pid), {}).get("team", "Unknown")
+            for pid in player_capsules
+        }
+        events = self._shot_tracker.update(ball_primitives, player_capsules, frame_idx, player_teams=player_teams)
+
+        # Record scores and shot events
+        for ev in events:
+            if ev["type"] == "SHOT_MAKE":
+                team = ev["team"]
+                points = ev["points"]
+                self.game_state.add_score(team, points)
+                
+                # Update player statistics
+                sid = str(ev["shooter_id"])
+                if sid in self.game_state.player_stats:
+                    self.game_state.player_stats[sid]["fg_made"] += 1
+                    self.game_state.player_stats[sid]["fg_att"] += 1
+                    
+                self.game_state.append_event(
+                    self.AGENT_NAME, "SHOT_MAKE",
+                    ev, frame_idx
+                )
+            elif ev["type"] == "SHOT_MISS":
+                # Update player statistics
+                sid = str(ev["shooter_id"])
+                if sid in self.game_state.player_stats:
+                    self.game_state.player_stats[sid]["fg_att"] += 1
+                    
+                self.game_state.append_event(
+                    self.AGENT_NAME, "SHOT_MISS",
+                    ev, frame_idx
+                )
 
     def on_stop(self):
         """Generate the Kampfbericht JSON on stop."""

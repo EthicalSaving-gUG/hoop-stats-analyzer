@@ -77,7 +77,6 @@ const ClientAIBenchmark = ({ onBack }) => {
 
     // Preprocessing for YOLO (640x640)
     const preprocess = (canvas) => {
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         // Draw image stretched to 640x640
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = 640;
@@ -97,7 +96,7 @@ const ClientAIBenchmark = ({ onBack }) => {
         return new ort.Tensor('float32', float32Data, [1, 3, 640, 640]);
     };
 
-    const processFrame = async (now, metadata) => {
+    const processFrame = async (now) => {
         if (!videoRef.current || !canvasRef.current || status !== 'running') return;
         
         const video = videoRef.current;

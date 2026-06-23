@@ -105,6 +105,10 @@ class BasketballAnalyzer:
             # ── Ball / scoring detection ──────────────────────────────────
             balls = self.detector.detect_ball(frame)
 
+            # ── Dynamische Korb-Erkennung & Auto-Kalibrierung ──────────────
+            detected_rims = self.detector.detect_rims(frame)
+            self.shot_tracker.update_rims(detected_rims)
+
             self.shot_tracker.update(balls, player_capsules, frame_idx)
 
             frame_idx += 1

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, FastForward, Maximize, Settings } from 'lucide-react';
 
@@ -10,6 +10,30 @@ const VideoPlayer = ({ videoUrl }) => {
     const [duration, setDuration] = useState('00:00');
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
+
+    const togglePlay = useCallback(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        setIsPlaying((wasPlaying) => {
+            if (wasPlaying) {
+                video.pause();
+            } else {
+                video.play();
+            }
+            return !wasPlaying;
+        });
+    }, []);
+
+    const stepFrame = useCallback((direction) => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const frameTime = 1 / 30;
+        video.currentTime += direction * frameTime;
+        video.pause();
+        setIsPlaying(false);
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -33,7 +57,7 @@ const VideoPlayer = ({ videoUrl }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPlaying]);
+    }, [stepFrame, togglePlay]);
 
     const formatTime = (timeInSeconds) => {
         if (isNaN(timeInSeconds)) return '00:00';
@@ -55,30 +79,9 @@ const VideoPlayer = ({ videoUrl }) => {
         setDuration(formatTime(videoRef.current.duration));
     };
 
-    const togglePlay = () => {
-        if (!videoRef.current) return;
-        if (isPlaying) {
-            videoRef.current.pause();
-        } else {
-            videoRef.current.play();
-        }
-        setIsPlaying(!isPlaying);
-    };
-
     const skipTime = (seconds) => {
         if (!videoRef.current) return;
         videoRef.current.currentTime += seconds;
-    };
-
-    const stepFrame = (direction) => {
-        if (!videoRef.current) return;
-        // Assume 30fps for frame stepping
-        const frameTime = 1 / 30;
-        videoRef.current.currentTime += direction * frameTime;
-        if (isPlaying) {
-            videoRef.current.pause();
-            setIsPlaying(false);
-        }
     };
 
     const handleSeek = (e) => {

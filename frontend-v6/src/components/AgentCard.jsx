@@ -1,17 +1,19 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Timer, Clock, ClipboardList, ShieldAlert, ScanLine, Hand } from 'lucide-react';
 
 const AGENT_META = {
-    shot_clock: { icon: '🕐', title: '24-Sekunden-Uhr', desc: 'Verwaltet die Shot Clock und erkennt Ballbesitzwechsel' },
-    game_clock: { icon: '⏱️', title: 'Spielzeiterfassung', desc: 'Steuert Spieluhr, Viertel und Timeouts' },
-    scoresheet: { icon: '📋', title: 'Kampfbericht', desc: 'Protokolliert Punkte, Fouls und Auswechslungen' },
-    referee: { icon: '🧑‍⚖️', title: 'Schiedsrichter', desc: 'Erkennt Regelverstöße und gibt Warnungen' },
-    pose: { icon: '🧍‍♂️', title: 'Biomechanik KI', desc: 'Analysiert Körperhaltung (Release Angle, 3er-Linie) via MediaPipe' },
-    referee_signals: { icon: '✋', title: 'Schiri Signale', desc: 'Erkennt Handzeichen (Timeout, Stop Clock) via KI-Pose' },
+    shot_clock: { icon: Timer, title: '24-Sekunden-Uhr', desc: 'Verwaltet die Shot Clock und erkennt Ballbesitzwechsel' },
+    game_clock: { icon: Clock, title: 'Spielzeiterfassung', desc: 'Steuert Spieluhr, Viertel und Timeouts' },
+    scoresheet: { icon: ClipboardList, title: 'Kampfbericht', desc: 'Protokolliert Punkte, Fouls und Auswechslungen' },
+    referee: { icon: ShieldAlert, title: 'Schiedsrichter', desc: 'Erkennt Regelverstöße und gibt Warnungen' },
+    pose: { icon: ScanLine, title: 'Biomechanik KI', desc: 'Analysiert Körperhaltung via MediaPipe oder DensePose' },
+    referee_signals: { icon: Hand, title: 'Schiri Signale', desc: 'Erkennt Handzeichen via KI-Pose' },
 };
 
 const AgentCard = ({ agentKey, enabled, onToggle, isLive, isActive }) => {
-    const meta = AGENT_META[agentKey] || { icon: '❓', title: agentKey, desc: '' };
+    const meta = AGENT_META[agentKey] || { icon: ShieldAlert, title: agentKey, desc: '' };
+    const Icon = meta.icon;
 
     return (
         <motion.div
@@ -21,7 +23,7 @@ const AgentCard = ({ agentKey, enabled, onToggle, isLive, isActive }) => {
             onClick={() => onToggle(agentKey)}
         >
             <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl">{meta.icon}</span>
+                <Icon className="w-7 h-7 text-orange-300" />
                 <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
                     <input
                         type="checkbox"

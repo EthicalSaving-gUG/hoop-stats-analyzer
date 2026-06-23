@@ -16,6 +16,21 @@ class RefereeAgent(BaseAgent):
         self._whistle_count = 0
         self._rules = game_state.rules  # FIBA or NBA
 
+        # AI Referee Pro State variables
+        self._possession_player = None
+        self._possession_team = None
+        self._steps_count = 0
+        self._last_player_pos = None
+        self._dribble_state = "NONE"
+        self._held_time = 0
+        self._established_frontcourt = False
+
+        # Pass and Dribble Tracking
+        self._last_possessor = None
+        self._last_possessor_frame = -999
+        self._last_possessor_pos = None
+        self._last_processed_frame = None
+
     def on_whistle(self):
         """Whistle detected → log referee whistle event."""
         self._whistle_count += 1
@@ -68,6 +83,208 @@ class RefereeAgent(BaseAgent):
         # 5. Unsportsmanlike foul accumulation (FIBA only)
         if rules.has_unsportsmanlike_fouls:
             self._check_unsportsmanlike_disqualification(frame_idx)
+
+        # 6. AI Referee Pro Rules (Traveling, Double-Dribble, Backcourt Violation)
+        self._check_ai_referee_pro_rules(frame_idx)
+
+    def _check_ai_referee_pro_rules(self, frame_idx):
+        gs = self.game_state
+        ct = getattr(gs, "court_tracking", None)
+        if not ct:
+            return
+
+        ball = ct.get("ball")
+        players = ct.get("players", {})
+
+        if not ball or not players:
+            return
+
+        # Track tick time delta
+        if self._last_processed_frame is None:
+            self._last_processed_frame = frame_idx
+            dt = 0.0
+        else:
+            frame_delta = frame_idx - self._last_processed_frame
+            self._last_processed_frame = frame_idx
+            dt = frame_delta / 30.0 if frame_delta > 0 else 0.0
+
+        # 1. Determine player in possession
+        # Find player closest to the ball
+        closest_pid = None
+        closest_dist = float('inf')
+        for pid, pdata in players.items():
+            ppos = pdata.get("pos")
+            if ppos:
+                dist = ((ball[0] - ppos[0])**2 + (ball[1] - ppos[1])**2)**0.5
+                if dist < closest_dist:
+                    closest_dist = dist
+                    closest_pid = pid
+
+        # A player possesses the ball if they are within 1.2 meters
+        current_possessor = None
+        if closest_dist < 1.2:
+            current_possessor = closest_pid
+
+        if current_possessor:
+            possessor_data = players[current_possessor]
+            team = possessor_data.get("team", "Unknown")
+            ppos = possessor_data.get("pos")
+            
+            # Switch possession to possessor's team
+            if gs.possession != team and team in ("home", "away"):
+                gs.set_possession(team)
+
+            # Detect Teammate Pass
+            if self._possession_player is None:
+                # Ball was loose/in-flight, now caught
+                if self._last_possessor is not None and self._last_possessor != current_possessor:
+                    time_delta = (frame_idx - self._last_possessor_frame) / 30.0
+                    if 0.1 < time_delta < 1.5:
+                        if ppos and self._last_possessor_pos:
+                            dist_m = ((ppos[0] - self._last_possessor_pos[0])**2 + (ppos[1] - self._last_possessor_pos[1])**2)**0.5
+                            velocity_ms = dist_m / time_delta if time_delta > 0 else 0.0
+                            
+                            # Check teams
+                            passer_team = gs.player_stats.get(str(self._last_possessor), {}).get("team", "Unknown")
+                            receiver_team = gs.player_stats.get(str(current_possessor), {}).get("team", "Unknown")
+                            
+                            if passer_team == receiver_team and passer_team != "Unknown":
+                                gs.append_event(
+                                    self.AGENT_NAME, "PASS_DETECTED",
+                                    {
+                                        "passer_id": self._last_possessor,
+                                        "receiver_id": current_possessor,
+                                        "team": passer_team,
+                                        "velocity_ms": round(velocity_ms, 2),
+                                        "distance_m": round(dist_m, 2),
+                                        "duration_s": round(time_delta, 2)
+                                    },
+                                    frame_idx
+                                )
+                                print(f"  📉 PASS DETECTED from Player {self._last_possessor} to {current_possessor} ({passer_team}) at {velocity_ms:.2f} m/s!")
+
+            # If player carrier changed, reset state machine
+            if self._possession_player != current_possessor:
+                self._possession_player = current_possessor
+                self._possession_team = team
+                self._steps_count = 0
+                self._last_player_pos = ppos
+                self._dribble_state = "DRIBBLING"
+                self._held_time = 0
+                
+                # Check if frontcourt is established immediately
+                if team == "home":
+                    self._established_frontcourt = (ppos[0] > 14.0) if ppos else False
+                else:
+                    self._established_frontcourt = (ppos[0] < 14.0) if ppos else False
+            else:
+                # Same player still has possession. Update their dribble duration
+                pid_str = str(current_possessor)
+                if pid_str not in gs.player_stats:
+                    gs.player_stats[pid_str] = {
+                        "jersey": "Unknown",
+                        "team": "Unknown",
+                        "points": 0,
+                        "fouls": 0,
+                        "fg_made": 0,
+                        "fg_att": 0,
+                        "dribble_duration_s": 0.0
+                    }
+                if "dribble_duration_s" not in gs.player_stats[pid_str]:
+                    gs.player_stats[pid_str]["dribble_duration_s"] = 0.0
+                gs.player_stats[pid_str]["dribble_duration_s"] += dt
+
+                # ── Schrittfehler (Traveling) & Dribbelfehler (Double-Dribble) Heuristics ──
+                
+                # A. Track steps / movement
+                if self._last_player_pos and ppos:
+                    move_dist = ((ppos[0] - self._last_player_pos[0])**2 + (ppos[1] - self._last_player_pos[1])**2)**0.5
+                    # A step is a significant movement of the player
+                    if move_dist > 0.6:
+                        # If player is in HELD state, they can only take 2 steps
+                        if self._dribble_state == "HELD":
+                            self._steps_count += 1
+                            self._last_player_pos = ppos
+                            
+                            if self._steps_count > 2:
+                                alert_key = f"traveling_{current_possessor}_{frame_idx}"
+                                if not any(k.startswith(f"traveling_{current_possessor}") for k in self._alerted_violations):
+                                    self._alerted_violations.add(alert_key)
+                                    gs.append_event(
+                                        self.AGENT_NAME, "VIOLATION_ALERT",
+                                        {
+                                            "type": "Schrittfehler (Traveling)",
+                                            "team": team,
+                                            "player_id": current_possessor,
+                                            "steps": self._steps_count,
+                                            "ruleset": self._rules.name
+                                        },
+                                        frame_idx
+                                    )
+                        else:
+                            self._last_player_pos = ppos
+
+                # B. Track Dribble State Transitions
+                # If the ball remains very close and stable relative to player, player is holding (HELD).
+                if closest_dist < 0.4:
+                    self._held_time += 1
+                    if self._held_time > 4: # held for ~0.4s (at 10fps)
+                        if self._dribble_state == "DRIBBLING":
+                            self._dribble_state = "HELD"
+                            self._steps_count = 0  # Start step count for holding
+                else:
+                    self._held_time = 0
+                    if self._dribble_state == "HELD" and closest_dist < 1.0:
+                        # Player was holding the ball, but starts dribbling again!
+                        alert_key = f"doubledribble_{current_possessor}_{frame_idx}"
+                        if not any(k.startswith(f"doubledribble_{current_possessor}") for k in self._alerted_violations):
+                            self._alerted_violations.add(alert_key)
+                            gs.append_event(
+                                self.AGENT_NAME, "VIOLATION_ALERT",
+                                {
+                                    "type": "Dribbelfehler (Double-Dribble)",
+                                    "team": team,
+                                    "player_id": current_possessor,
+                                    "ruleset": self._rules.name
+                                },
+                                frame_idx
+                            )
+                            self._dribble_state = "DRIBBLING"
+
+                # ── Rückspiel (Backcourt Violation) Heuristics ──
+                if team == "home":
+                    is_frontcourt = (ppos[0] > 14.0) if ppos else False
+                else:
+                    is_frontcourt = (ppos[0] < 14.0) if ppos else False
+
+                if is_frontcourt and not self._established_frontcourt:
+                    self._established_frontcourt = True
+                
+                elif self._established_frontcourt and not is_frontcourt:
+                    # Attacking team had established frontcourt, but went back to backcourt!
+                    alert_key = f"backcourt_{team}_{frame_idx}"
+                    if not any(k.startswith(f"backcourt_{team}") for k in self._alerted_violations):
+                        self._alerted_violations.add(alert_key)
+                        gs.append_event(
+                            self.AGENT_NAME, "VIOLATION_ALERT",
+                            {
+                                "type": "Rückspiel (Backcourt Violation)",
+                                "team": team,
+                                "player_id": current_possessor,
+                                "coord_x": round(ppos[0], 2),
+                                "ruleset": self._rules.name
+                            },
+                            frame_idx
+                        )
+                        self._established_frontcourt = False
+        else:
+            # Ball has no possessor (in flight or loose ball)
+            if self._possession_player is not None:
+                self._last_possessor = self._possession_player
+                self._last_possessor_frame = frame_idx
+                self._last_possessor_pos = self._last_player_pos
+                self._possession_player = None
+                self._possession_team = None
 
     def _check_defensive_three_seconds(self, frame, frame_idx):
         """

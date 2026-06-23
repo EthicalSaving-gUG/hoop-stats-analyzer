@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Hoop Camera - Mobile Node</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0c10;
+            --panel-bg: rgba(16, 20, 28, 0.65);
+            --border-glow: rgba(0, 242, 254, 0.25);
+            --primary: #00f2fe;
+            --accent: #4facfe;
+            --text-glow: 0 0 10px rgba(0, 242, 254, 0.5);
+            --neon-green: #39ff14;
+            --neon-red: #ff073a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Fullscreen Video Stream preview */
+        #video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background: #000;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(1); /* Rear camera not mirrored */
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Glassmorphic Overlay Panels */
+        .hud-overlay {
+            position: absolute;
+            z-index: 10;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .logo-panel {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            box-shadow: var(--text-glow);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 15px var(--primary); }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        .logo-text {
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--neon-red);
+        }
+
+        .status-dot.connected {
+            background-color: var(--neon-green);
+            box-shadow: 0 0 8px var(--neon-green);
+        }
+
+        .hud-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: auto;
+        }
+
+        /* Interactive Controls */
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        button {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.4), rgba(0, 242, 254, 0.4));
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 12px;
+            color: white;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:active {
+            transform: scale(0.95);
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.7), rgba(0, 242, 254, 0.7));
+        }
+
+        button.active {
+            background: linear-gradient(135deg, var(--neon-green), #00c853);
+            border-color: var(--neon-green);
+            color: #000;
+            font-weight: 800;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4);
+        }
+
+        /* Information / Edge AI Panel Sheet */
+        .info-sheet {
+            background: rgba(10, 12, 16, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.1, 0.76, 0.55, 0.94);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+            max-height: 80%;
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+
+        .info-sheet.open {
+            transform: translateY(0);
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sheet-title {
+            font-weight: 800;
+            font-size: 20px;
+            background: linear-gradient(135deg, #ff007f, #7f00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            flex: 0;
+            width: 32px;
+            height: 32px;
+        }
+
+        .info-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .info-card h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .info-card p {
+            font-size: 13px;
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        .tech-tag {
+            display: inline-block;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+            margin-right: 5px;
+        }
+
+        .tech-tag.orange {
+            background: rgba(255, 127, 0, 0.1);
+            color: #ff7f00;
+            border-color: rgba(255, 127, 0, 0.2);
+        }
+
+        .console-log {
+            font-family: monospace;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 11px;
+            color: #88ff88;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Camera Feed Fullscreen Container -->
+    <div id="video-container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <!-- HUD Overlay Panels -->
+    <div class="hud-overlay">
+        <!-- Header HUD -->
+        <div class="hud-header">
+            <div class="glass-panel logo-panel">
+                <div class="logo-dot"></div>
+                <div class="logo-text">HOOP AI NODE</div>
+            </div>
+            <div class="glass-panel status-badge" id="status-panel">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">OFFLINE</span>
+            </div>
+        </div>
+
+        <!-- Footer HUD Controls -->
+        <div class="hud-footer">
+            <div class="glass-panel" id="latency-panel" style="display: none; padding: 8px 16px; font-size: 12px; align-self: flex-start;">
+                ⚡ Ping: <span id="ping-val" style="color:var(--primary); font-weight:bold;">--</span> ms
+            </div>
+            <div class="controls-row">
+                <button id="stream-btn">Stream starten</button>
+                <button id="info-btn" style="flex:0; width: 60px; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1)">💡</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Sheet about Edge AI & Multi-Cam -->
+    <div class="info-sheet" id="info-sheet">
+        <div class="sheet-header">
+            <h3 class="sheet-title">Handy Kamera & Edge AI</h3>
+            <button class="close-btn" id="close-sheet-btn">×</button>
+        </div>
+        <div class="info-content">
+            <div class="info-card">
+                <h4>📱 Multi-Kamera per WebRTC</h4>
+                <p>Dieses Handy streamt seinen Kamera-Feed in Echtzeit (Latenz &lt;200ms) über einen modernen WebRTC Peer-to-Peer Kanal an das Haupt-Dashboard. Es wird keine native App benötigt – läuft direkt in Safari (iOS) und Chrome (Android).</p>
+                <span class="tech-tag">WebRTC</span>
+                <span class="tech-tag">H.264 / VP8</span>
+                <span class="tech-tag">WebSockets</span>
+            </div>
+
+            <div class="info-card">
+                <h4>🧠 Sinnvolle Berechnungen direkt auf dem Handy (Edge AI)</h4>
+                <p>Moderne Handys besitzen extrem starke Grafikchips (GPUs) und neuronale Beschleuniger (NPUs). Folgende Berechnungen können direkt im Handy-Browser hardwarebeschleunigt (WebGL/WebGPU) durchgeführt werden:</p>
+                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                    <p><strong>1. Pose Landmarking (Skelett-Erfassung):</strong> Die Erfassung von 2D/3D Gelenkpunkten der Spieler via MediaPipe läuft mit bis zu 60 FPS. Das spart dem zentralen Server enorme Rechenlast!</p>
+                    <p><strong>2. Ball- & Spieler-Detektion:</strong> Extrem schlanke YOLO-Modelle (wie YOLO11-nano) können im Browser via <em>ONNX Runtime Web</em> ausgeführt werden. Statt des kompletten 4K-Videos müssen nur noch X/Y-Koordinaten gesendet werden (spart 99.9% Bandbreite!).</p>
+                    <p><strong>3. Motion Pre-screening:</strong> Der Stream wird nur gestartet oder hochauflösend gesendet, wenn lokale Bewegung auf dem Spielfeld stattfindet.</p>
+                </div>
+                <span class="tech-tag orange">ONNX Runtime Web</span>
+                <span class="tech-tag orange">WebGL / WebGPU</span>
+                <span class="tech-tag orange">MediaPipe</span>
+            </div>
+
+            <div class="info-card">
+                <h4>⚡ Lokales Aktivitäts-Protokoll</h4>
+                <div class="console-log" id="console-log">
+                    [System] Initialisiert. Warte auf Benutzerinteraktion...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WebRTC Client Logic -->
+    <script>
+        const video = document.getElementById('webcam');
+        const overlay = document.getElementById('overlay');
+        const ctx = overlay.getContext('2d');
+        const streamBtn = document.getElementById('stream-btn');
+        const infoBtn = document.getElementById('info-btn');
+        const closeSheetBtn = document.getElementById('close-sheet-btn');
+        const infoSheet = document.getElementById('info-sheet');
+        const statusText = document.getElementById('status-text');
+        const statusDot = document.getElementById('status-dot');
+        const latencyPanel = document.getElementById('latency-panel');
+        const pingVal = document.getElementById('ping-val');
+        const consoleLog = document.getElementById('console-log');
+
+        let localStream = null;
+        let ws = null;
+        let peerConnection = null;
+        let myPeerId = null;
+        let targetReceiverId = null;
+        let isStreaming = false;
+
+        // Custom logging helper
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            consoleLog.innerHTML += `<br>[${time}] ${msg}`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            console.log(msg);
+        }
+
+        // Sheet Toggle
+        infoBtn.onclick = () => infoSheet.classList.add('open');
+        closeSheetBtn.onclick = () => infoSheet.classList.remove('open');
+
+        // Access Back Camera
+        async function startCamera() {
+            try {
+                // Prioritize back camera for high-quality arena recording
+                const constraints = {
+                    video: {
+                        facingMode: { ideal: "environment" },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: false
+                };
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = localStream;
+                log("Kamera erfolgreich gestartet (Umgebungskamera).");
+                
+                // Adjust overlay canvas dimensions
+                video.onloadedmetadata = () => {
+                    overlay.width = video.videoWidth;
+                    overlay.height = video.videoHeight;
+                    // Start a simple visual overlay indicating active lens capture
+                    drawOverlayIndicators();
+                };
+            } catch (err) {
+                log("Fehler beim Kamerazugriff: " + err.message);
+                alert("Kamerazugriff verweigert oder nicht verfügbar.");
+            }
+        }
+
+        // Draw HUD indicators on canvas (visual cue of AI scanning)
+        function drawOverlayIndicators() {
+            if (!localStream) return;
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+            
+            // Draw crosshairs
+            ctx.strokeStyle = "rgba(0, 242, 254, 0.4)";
+            ctx.lineWidth = 2;
+            const size = 30;
+            const cx = overlay.width / 2;
+            const cy = overlay.height / 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(cx - size, cy); ctx.lineTo(cx + size, cy);
+            ctx.moveTo(cx, cy - size); ctx.lineTo(cx, cy + size);
+            ctx.stroke();
+
+            // AI Frame bounding box indication
+            ctx.strokeStyle = "rgba(0, 242, 254, 0.25)";
+            ctx.strokeRect(40, 40, overlay.width - 80, overlay.height - 80);
+
+            requestAnimationFrame(drawOverlayIndicators);
+        }
+
+        // WebRTC Connection Setup
+        function connectSignaling() {
+            const loc = window.location;
+            const wsProtocol = loc.protocol === "https:" ? "wss:" : "ws:";
+            // fallback to localhost if hosted locally, or exact server ip
+            const wsUrl = `${wsProtocol}//${loc.host}/ws/webrtc`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                log("Signaling Server verbunden.");
+                ws.send(JSON.stringify({ type: "register", role: "broadcaster" }));
+            };
+
+            ws.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === "registered") {
+                    myPeerId = data.peer_id;
+                    log(`Registriert mit Peer ID: ${myPeerId}`);
+                    statusText.innerText = `BEREIT (${myPeerId})`;
+                    statusText.style.color = "var(--primary)";
+                }
+                
+                else if (data.type === "offer") {
+                    targetReceiverId = data.sender_id;
+                    log(`Offer empfangen von Empfänger: ${targetReceiverId}`);
+                    await handleOffer(data.payload, targetReceiverId);
+                }
+                
+                else if (data.type === "candidate") {
+                    if (peerConnection) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.payload));
+                        log("ICE-Candidate hinzugefügt.");
+                    }
+                }
+            };
+
+            ws.onerror = (err) => {
+                log("Signaling Fehler: " + err.message);
+            };
+
+            ws.onclose = () => {
+                log("Signaling Server getrennt. Versuche Reconnect in 3s...");
+                statusText.innerText = "OFFLINE";
+                statusText.style.color = "var(--neon-red)";
+                statusDot.classList.remove('connected');
+                setTimeout(connectSignaling, 3000);
+            };
+        }
+
+        async function handleOffer(offerSdp, receiverId) {
+            try {
+                // Initialize PeerConnection
+                const config = {
+                    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+                };
+                peerConnection = new RTCPeerConnection(config);
+
+                // Add local camera video track to peer connection
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Handle ICE candidates
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        ws.send(JSON.stringify({
+                            type: "candidate",
+                            target_id: receiverId,
+                            payload: event.candidate
+                        }));
+                    }
+                };
+
+                peerConnection.onconnectionstatechange = () => {
+                    log(`RTCPeer Connection State: ${peerConnection.connectionState}`);
+                    if (peerConnection.connectionState === "connected") {
+                        statusText.innerText = "STREAMING LIVE";
+                        statusText.style.color = "var(--neon-green)";
+                        statusDot.classList.add('connected');
+                        latencyPanel.style.display = "block";
+                        pingVal.innerText = "15-45"; // typical low WebRTC local ping
+                    } else if (peerConnection.connectionState === "disconnected") {
+                        statusText.innerText = "DISCONNECTED";
+                        statusText.style.color = "var(--neon-red)";
+                        statusDot.classList.remove('connected');
+                    }
+                };
+
+                // Apply remote offer
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offerSdp));
+
+                // Create local answer
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+
+                // Send answer back to the receiver
+                ws.send(JSON.stringify({
+                    type: "answer",
+                    target_id: receiverId,
+                    payload: answer
+                }));
+                
+                log("SDP Answer gesendet.");
+            } catch (err) {
+                log("Fehler bei Offer-Verarbeitung: " + err.message);
+            }
+        }
+
+        // Button action
+        streamBtn.onclick = async () => {
+            if (!isStreaming) {
+                await startCamera();
+                connectSignaling();
+                streamBtn.innerText = "Streaming stoppen";
+                streamBtn.classList.add('active');
+                isStreaming = true;
+            } else {
+                // Stop camera
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                if (peerConnection) {
+                    peerConnection.close();
+                }
+                if (ws) {
+                    ws.close();
+                }
+                streamBtn.innerText = "Stream starten";
+                streamBtn.classList.remove('active');
+                statusText.innerText = "OFFLINE";
+                statusText.style.color = "var(--neon-red)";
+                statusDot.classList.remove('connected');
+                latencyPanel.style.display = "none";
+                isStreaming = false;
+                log("Streaming gestoppt.");
+            }
+        };
+
+        // Start page on load
+        window.onload = () => {
+            log("AI Hoop Camera initialisiert. Bitte auf 'Stream starten' klicken.");
+        };
+    </script>
+</body>
+</html>

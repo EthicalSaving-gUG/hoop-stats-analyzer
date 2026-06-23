@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hoop Stats - Multi-Cam Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #07090e;
+            --panel-bg: rgba(16, 20, 28, 0.55);
+            --border-glow: rgba(0, 242, 254, 0.15);
+            --primary: #00f2fe;
+            --accent: #4facfe;
+            --violet: #7f00ff;
+            --pink: #ff007f;
+            --text-glow: 0 0 10px rgba(0, 242, 254, 0.4);
+            --neon-green: #39ff14;
+            --neon-red: #ff073a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(127, 0, 255, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 242, 254, 0.08) 0px, transparent 50%);
+        }
+
+        /* Glassmorphic Container */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 242, 254, 0.2);
+            box-shadow: 0 12px 40px 0 rgba(0, 242, 254, 0.05);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(7, 9, 14, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            box-shadow: var(--text-glow);
+            animation: pulse 2.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 20px var(--primary); }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        .logo-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--neon-red);
+        }
+
+        .status-dot.connected {
+            background-color: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        /* Dashboard Layout */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            padding: 40px;
+            flex: 1;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Multi-Cam Grid */
+        .grid-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .counter-pill {
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 24px;
+            transition: all 0.5s ease;
+        }
+
+        .video-grid.empty {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            border: 2px dashed rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+        }
+
+        .placeholder-box {
+            text-align: center;
+            color: #555866;
+            max-width: 320px;
+        }
+
+        .placeholder-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: inline-block;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Stream Feed Card */
+        .feed-card {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .feed-title {
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+            animation: pulse 1.5s infinite;
+        }
+
+        .feed-badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .hud-overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .hud-overlay-text {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 6;
+            font-family: monospace;
+            font-size: 10px;
+            color: var(--primary);
+            background: rgba(0,0,0,0.6);
+            padding: 4px 8px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            pointer-events: none;
+            border: 1px solid rgba(0,242,254,0.3);
+            text-shadow: var(--text-glow);
+        }
+
+        .feed-controls {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .feed-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: #ddd;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .feed-btn:hover {
+            background: rgba(0, 242, 254, 0.1);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Sidebar Panels */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .sidebar-card h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--primary), var(--violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-action {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(0, 242, 254, 0.3));
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            border-radius: 12px;
+            color: white;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+        }
+
+        .btn-action:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-action.active {
+            background: linear-gradient(135deg, var(--pink), var(--violet));
+            border-color: var(--pink);
+        }
+
+        /* Console Log style */
+        .console-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #88ff88;
+            height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .console-line {
+            line-height: 1.4;
+            opacity: 0.85;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            padding-bottom: 4px;
+        }
+
+        .console-line span {
+            color: #888;
+            margin-right: 6px;
+        }
+
+        /* Tech Guide List */
+        .tech-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tech-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+
+        .tech-item h4 {
+            font-size: 13px;
+            color: var(--primary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tech-item p {
+            font-size: 11px;
+            color: #bbb;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="logo-group">
+            <div class="logo-dot"></div>
+            <div class="logo-title">AI HOOP STATS — RECEIVER</div>
+        </div>
+        
+        <div class="status-badge-container">
+            <div class="status-badge">
+                <span>Aktiv:</span>
+                <span id="active-cams-count" style="color:var(--primary); font-weight:800;">0</span>
+                <span>Cams</span>
+            </div>
+            <div class="status-badge" id="status-panel">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">OFFLINE</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <div class="dashboard-container">
+        
+        <!-- Live Video Grid Section -->
+        <div class="grid-section">
+            <div class="section-header">
+                <h2 class="section-title">Live Kamera-Feeds</h2>
+            </div>
+            
+            <!-- Video Grid -->
+            <div class="video-grid empty" id="video-grid">
+                <div class="placeholder-box" id="placeholder-box">
+                    <span class="placeholder-icon">🎥</span>
+                    <h3>Keine Kameras verbunden</h3>
+                    <p style="margin-top: 10px; font-size:13px;">Verbinde Smartphones über die Adresse <strong>/mobile</strong> im selben Netzwerk, um Echtzeit-WebRTC-Kamerafeeds einzubinden.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Section -->
+        <div class="sidebar">
+            
+            <!-- Connection Control & Simulation -->
+            <div class="glass-panel sidebar-card">
+                <h3>Steuerung & Simulation</h3>
+                <button class="btn-action" id="sim-ai-btn">Edge AI Overlays: AUS</button>
+                <div style="font-size:12px; color:#aaa; line-height:1.4;">
+                    <p><strong>Edge AI Overlay:</strong> Simuliert lokal vom Handy erfasste Begrenzungsrahmen (Spieler-Detektion) und Wurfbahn-Vektoren als Echtzeit-HUD auf den Kamerabildern.</p>
+                </div>
+            </div>
+
+            <!-- WebRTC Signaling Console Log -->
+            <div class="glass-panel sidebar-card">
+                <h3>Signaling-Protokoll</h3>
+                <div class="console-log" id="console-log">
+                    <div class="console-line"><span>10:00:00</span>[System] Dashboard initialisiert. Warte auf WebSocket...</div>
+                </div>
+            </div>
+
+            <!-- Edge AI Computations Guide -->
+            <div class="glass-panel sidebar-card">
+                <h3>Edge AI Berechnungs-Guide</h3>
+                <div class="tech-list">
+                    <div class="tech-item">
+                        <h4>🧠 Pose Landmarking</h4>
+                        <p>Das Handy erfasst bis zu 60 FPS 3D-Körper-Gelenkpunkte lokal via MediaPipe/WebGL, was dem zentralen Server immense Rechenleistung spart.</p>
+                    </div>
+                    <div class="tech-item">
+                        <h4>⚽ ONNX Ball & Player Detection</h4>
+                        <p>Mit extrem schlanken YOLO11-nano Netzen via WebGPU sendet das Handy nur noch Bounding-Box-Daten statt schwerem Video (-99.9% Bandbreite!).</p>
+                    </div>
+                    <div class="tech-item">
+                        <h4>⚡ Motion Pre-screening</h4>
+                        <p>Aktiviert die Pipeline erst, wenn Pixel-Änderungsraten lokale Bewegung auf dem Basketballplatz melden.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- WebRTC Receiver Signaling and Simulation Scripts -->
+    <script>
+        const videoGrid = document.getElementById('video-grid');
+        const placeholderBox = document.getElementById('placeholder-box');
+        const activeCamsCount = document.getElementById('active-cams-count');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const consoleLog = document.getElementById('console-log');
+        const simAiBtn = document.getElementById('sim-ai-btn');
+
+        let ws = null;
+        const peerConnections = {}; // broadcasterId -> RTCPeerConnection
+        let simAiActive = false;
+        let simLoops = {}; // broadcasterId -> intervalId
+
+        // Custom Console Logger
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            line.innerHTML = `<span>${time}</span>${msg}`;
+            consoleLog.appendChild(line);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            console.log(msg);
+        }
+
+        // Toggle Simulated AI Overlays
+        simAiBtn.onclick = () => {
+            simAiActive = !simAiActive;
+            if (simAiActive) {
+                simAiBtn.innerText = "Edge AI Overlays: EIN";
+                simAiBtn.classList.add('active');
+                log("Edge AI Overlay-Simulation gestartet.");
+            } else {
+                simAiBtn.innerText = "Edge AI Overlays: AUS";
+                simAiBtn.classList.remove('active');
+                log("Edge AI Overlay-Simulation gestoppt.");
+            }
+        };
+
+        // WebSockets Signaling Protocol Setup
+        function connectSignaling() {
+            const loc = window.location;
+            const wsProtocol = loc.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${wsProtocol}//${loc.host}/ws/webrtc`;
+
+            log("Verbinde mit Signaling Server...");
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                log("Erfolgreich mit Signaling Server verbunden.");
+                ws.send(JSON.stringify({ type: "register", role: "viewer" }));
+                statusText.innerText = "ONLINE";
+                statusText.style.color = "var(--primary)";
+                statusDot.classList.add('connected');
+            };
+
+            ws.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === "registered") {
+                    log(`Registriert als Empfänger. Eigene Peer ID: ${data.peer_id}`);
+                }
+
+                else if (data.type === "broadcasters_list") {
+                    log(`Aktive Kameras empfangen: [${data.broadcasters.join(', ') || 'Keine'}]`);
+                    data.broadcasters.forEach(broadcasterId => {
+                        initiateWebRTCConnection(broadcasterId);
+                    });
+                }
+
+                else if (data.type === "broadcaster_connected") {
+                    log(`Neue Kamera online: ${data.peer_id}`);
+                    initiateWebRTCConnection(data.peer_id);
+                }
+
+                else if (data.type === "broadcaster_disconnected") {
+                    log(`Kamera offline gegangen: ${data.peer_id}`);
+                    closeWebRTCConnection(data.peer_id);
+                }
+
+                else if (data.type === "answer") {
+                    log(`SDP Answer von Kamera ${data.sender_id} empfangen.`);
+                    const pc = peerConnections[data.sender_id];
+                    if (pc) {
+                        try {
+                            await pc.setRemoteDescription(new RTCSessionDescription(data.payload));
+                            log(`Remote SDP erfolgreich gesetzt für Kamera ${data.sender_id}.`);
+                        } catch (err) {
+                            log(`Fehler beim Setzen des Remote SDP für ${data.sender_id}: ` + err.message);
+                        }
+                    }
+                }
+
+                else if (data.type === "candidate") {
+                    const pc = peerConnections[data.sender_id];
+                    if (pc) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(data.payload));
+                        } catch (err) {
+                            // Suppress verbose log for minor ICE warning
+                        }
+                    }
+                }
+            };
+
+            ws.onerror = (err) => {
+                log("Signaling WebSocket Fehler.");
+            };
+
+            ws.onclose = () => {
+                log("Signaling Verbindung unterbrochen. Versuche Reconnect in 3s...");
+                statusText.innerText = "OFFLINE";
+                statusText.style.color = "var(--neon-red)";
+                statusDot.classList.remove('connected');
+                
+                // Cleanup all connections
+                Object.keys(peerConnections).forEach(id => closeWebRTCConnection(id));
+                
+                setTimeout(connectSignaling, 3000);
+            };
+        }
+
+        // Setup individual WebRTC Peer Connection
+        async function initiateWebRTCConnection(broadcasterId) {
+            if (peerConnections[broadcasterId]) return;
+
+            log(`Initialisiere WebRTC-Kanal für Kamera ${broadcasterId}...`);
+
+            const config = {
+                iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+            };
+            const pc = new RTCPeerConnection(config);
+            peerConnections[broadcasterId] = pc;
+
+            // Define dynamic audio/video transceivers
+            pc.addTransceiver("video", { direction: "recvonly" });
+
+            pc.ontrack = (event) => {
+                log(`Live Video-Track von Kamera ${broadcasterId} empfangen.`);
+                addVideoFeed(broadcasterId, event.streams[0]);
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: "candidate",
+                        target_id: broadcasterId,
+                        payload: event.candidate
+                    }));
+                }
+            };
+
+            pc.onconnectionstatechange = () => {
+                log(`Kanal-Status ${broadcasterId}: ${pc.connectionState}`);
+                const badge = document.getElementById(`badge-${broadcasterId}`);
+                if (badge) {
+                    if (pc.connectionState === "connected") {
+                        badge.innerText = "LIVE";
+                        badge.style.background = "rgba(57, 255, 20, 0.15)";
+                        badge.style.borderColor = "var(--neon-green)";
+                        badge.style.color = "var(--neon-green)";
+                    } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+                        badge.innerText = "ABGEBROCHEN";
+                        badge.style.background = "rgba(255, 7, 58, 0.15)";
+                        badge.style.borderColor = "var(--neon-red)";
+                        badge.style.color = "var(--neon-red)";
+                    } else {
+                        badge.innerText = pc.connectionState.toUpperCase();
+                    }
+                }
+            };
+
+            try {
+                // Generate SDP Offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                ws.send(JSON.stringify({
+                    type: "offer",
+                    target_id: broadcasterId,
+                    payload: offer
+                }));
+                log(`SDP Offer erfolgreich gesendet an Kamera ${broadcasterId}.`);
+            } catch (err) {
+                log(`Fehler beim Verbindungsaufbau zu ${broadcasterId}: ` + err.message);
+            }
+        }
+
+        // Add HTML video structure to grid
+        function addVideoFeed(broadcasterId, stream) {
+            // Hide placeholder
+            if (placeholderBox) {
+                placeholderBox.style.display = 'none';
+                videoGrid.classList.remove('empty');
+            }
+
+            let feedDiv = document.getElementById(`feed-${broadcasterId}`);
+            if (!feedDiv) {
+                feedDiv = document.createElement('div');
+                feedDiv.id = `feed-${broadcasterId}`;
+                feedDiv.className = 'glass-panel feed-card';
+                
+                feedDiv.innerHTML = `
+                    <div class="feed-header">
+                        <div class="feed-title">
+                            <span class="pulse-dot"></span>
+                            Kamera: CAM-${broadcasterId}
+                        </div>
+                        <div class="feed-badge" id="badge-${broadcasterId}" style="border: 1px solid rgba(0, 242, 254, 0.4); color: var(--primary); background: rgba(0, 242, 254, 0.05);">VERBINDEN...</div>
+                    </div>
+                    <div class="video-wrapper">
+                        <video id="vid-${broadcasterId}" autoplay playsinline></video>
+                        <canvas id="canvas-${broadcasterId}" class="hud-overlay-canvas"></canvas>
+                        <div class="hud-overlay-text" id="hud-txt-${broadcasterId}">AI EDGE: IDLE</div>
+                    </div>
+                    <div class="feed-controls">
+                        <button class="feed-btn" onclick="toggleFullscreen('vid-${broadcasterId}')">Vollbild 📺</button>
+                    </div>
+                `;
+                videoGrid.appendChild(feedDiv);
+            }
+
+            const videoEl = document.getElementById(`vid-${broadcasterId}`);
+            videoEl.srcObject = stream;
+            
+            // Start simulation loop for this feed
+            startSimulatingAI(broadcasterId);
+            updateActiveCount();
+        }
+
+        // Clean removal of a camera feed
+        function closeWebRTCConnection(broadcasterId) {
+            if (peerConnections[broadcasterId]) {
+                peerConnections[broadcasterId].close();
+                delete peerConnections[broadcasterId];
+            }
+            if (simLoops[broadcasterId]) {
+                clearInterval(simLoops[broadcasterId]);
+                delete simLoops[broadcasterId];
+            }
+            
+            const feedDiv = document.getElementById(`feed-${broadcasterId}`);
+            if (feedDiv) {
+                feedDiv.remove();
+            }
+            
+            updateActiveCount();
+        }
+
+        // Update camera counts
+        function updateActiveCount() {
+            const count = Object.keys(peerConnections).length;
+            activeCamsCount.innerText = count;
+
+            if (count === 0) {
+                if (placeholderBox) {
+                    placeholderBox.style.display = 'block';
+                }
+                videoGrid.classList.add('empty');
+            }
+        }
+
+        // Standard HTML5 Fullscreen Helper
+        window.toggleFullscreen = function(videoId) {
+            const videoEl = document.getElementById(videoId);
+            if (videoEl) {
+                if (videoEl.requestFullscreen) {
+                    videoEl.requestFullscreen();
+                } else if (videoEl.webkitRequestFullscreen) { /* Safari */
+                    videoEl.webkitRequestFullscreen();
+                } else if (videoEl.msRequestFullscreen) { /* IE11 */
+                    videoEl.msRequestFullscreen();
+                }
+            }
+        }
+
+        // Premium simulated AI bounding boxes on canvas
+        function startSimulatingAI(broadcasterId) {
+            const canvas = document.getElementById(`canvas-${broadcasterId}`);
+            const hudText = document.getElementById(`hud-txt-${broadcasterId}`);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            
+            // Adjust canvas dimensions inside loop based on parent element
+            simLoops[broadcasterId] = setInterval(() => {
+                const wrapper = canvas.parentElement;
+                if (!wrapper) return;
+
+                canvas.width = wrapper.clientWidth;
+                canvas.height = wrapper.clientHeight;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (!simAiActive) {
+                    hudText.innerText = "AI EDGE: STANDBY";
+                    hudText.style.color = "var(--primary)";
+                    hudText.style.borderColor = "rgba(0, 242, 254, 0.3)";
+                    return;
+                }
+
+                hudText.innerText = "AI EDGE: PROCESSING";
+                hudText.style.color = "var(--neon-green)";
+                hudText.style.borderColor = "var(--neon-green)";
+
+                // Draw bounding boxes of simulated players
+                ctx.lineWidth = 2;
+                
+                // Draw 2 simulated player boxes
+                const time = Date.now() * 0.001;
+                
+                // Player 1 (moves left/right)
+                const p1_x = canvas.width * 0.3 + Math.sin(time) * (canvas.width * 0.15);
+                const p1_y = canvas.height * 0.5 + Math.cos(time) * 10;
+                ctx.strokeStyle = "var(--primary)";
+                ctx.strokeRect(p1_x, p1_y, 60, 110);
+                ctx.fillStyle = "rgba(0, 242, 254, 0.15)";
+                ctx.fillRect(p1_x, p1_y, 60, 110);
+                
+                ctx.fillStyle = "var(--primary)";
+                ctx.font = "bold 10px Outfit";
+                ctx.fillText("PLAYER #23 [89%]", p1_x, p1_y - 6);
+
+                // Player 2 (moves in opposite direction)
+                const p2_x = canvas.width * 0.6 - Math.sin(time * 0.8) * (canvas.width * 0.1);
+                const p2_y = canvas.height * 0.45 + Math.sin(time * 0.5) * 15;
+                ctx.strokeStyle = "var(--pink)";
+                ctx.strokeRect(p2_x, p2_y, 55, 100);
+                ctx.fillStyle = "rgba(255, 0, 127, 0.15)";
+                ctx.fillRect(p2_x, p2_y, 55, 100);
+                
+                ctx.fillStyle = "var(--pink)";
+                ctx.fillText("PLAYER #04 [94%]", p2_x, p2_y - 6);
+
+                // Draw simulated ball trajectory
+                const ball_x = canvas.width * 0.48 + Math.cos(time * 1.5) * (canvas.width * 0.2);
+                const ball_y = canvas.height * 0.35 + Math.sin(time * 3.0) * (canvas.height * 0.15) - Math.abs(Math.sin(time * 1.5)) * 40;
+                
+                ctx.beginPath();
+                ctx.arc(ball_x, ball_y, 8, 0, 2 * Math.PI);
+                ctx.strokeStyle = "orange";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.fillStyle = "rgba(255, 165, 0, 0.6)";
+                ctx.fill();
+
+                ctx.fillStyle = "orange";
+                ctx.fillText("BALL [99%]", ball_x + 12, ball_y + 4);
+
+            }, 40); // 25 FPS update rate
+        }
+
+        // Initialize connection on load
+        window.onload = () => {
+            connectSignaling();
+        };
+    </script>
+</body>
+</html>

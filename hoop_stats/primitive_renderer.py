@@ -543,9 +543,12 @@ class PrimitiveRenderer:
 
         try:
             import torch
-            device_label = f"GPU ({torch.cuda.get_device_name(0)})"
+            if torch.cuda.is_available():
+                device_label = f"GPU ({torch.cuda.get_device_name(0)})"
+            else:
+                device_label = "CPU"
         except Exception:
-            device_label = "GPU (CUDA)"
+            device_label = "CPU"
 
         print(f"  ⚡ Inference device: {device_label}")
         print(f"  📹 {fw}x{fh} @ {fps:.1f}fps, {total} total frames")

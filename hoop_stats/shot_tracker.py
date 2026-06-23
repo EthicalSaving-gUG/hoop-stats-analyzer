@@ -121,10 +121,11 @@ class ShotTracker:
 
     # ── Core update ──────────────────────────────────────────────────────
 
-    def update(self, balls, player_capsules, frame_idx):
+    def update(self, balls, player_capsules, frame_idx, player_teams=None):
         """
         balls: list of Ball primitives
         player_capsules: dict of {player_id: PlayerCapsule}
+        player_teams: dict of {player_id_str: team_name}
         """
         events = []
 
@@ -146,14 +147,14 @@ class ShotTracker:
                 self.ball_frame_history.pop(0)
 
             # 1. Detect Shot Release
-            self._detect_release(player_capsules, frame_idx)
+            self._detect_release(player_capsules, frame_idx, player_teams)
 
             # 2. Track Active Shots & Detect Outcomes
             events.extend(self._evaluate_active_shots(ball, frame_idx))
 
         return events
 
-    def _detect_release(self, player_capsules, frame_idx):
+    def _detect_release(self, player_capsules, frame_idx, player_teams=None):
         """Looks for a strong upward movement pattern indicating a shot release."""
         if len(self.ball_history) < 5:
             return
@@ -171,6 +172,29 @@ class ShotTracker:
             start_frame = recent_frames[0]
             shooter_id = self._get_closest_player(start_ball, player_capsules)
 
+            # Calculate defender distance at release moment
+            defender_dist = 999.0
+            if shooter_id is not None and shooter_id in player_capsules:
+                shooter_cap = player_capsules[shooter_id]
+                shooter_pos = shooter_cap.meter_pos
+                if shooter_pos:
+                    shooter_team = player_teams.get(str(shooter_id), "Unknown") if player_teams else "Unknown"
+                    min_dist = float('inf')
+                    for pid, cap in player_capsules.items():
+                        if pid == shooter_id:
+                            continue
+                        if cap.meter_pos:
+                            other_team = player_teams.get(str(pid), "Unknown") if player_teams else "Unknown"
+                            # If team assignments are known, only treat opposing team members as defenders
+                            if player_teams and shooter_team != "Unknown" and other_team != "Unknown":
+                                if other_team == shooter_team:
+                                    continue
+                            d = shooter_pos.distance_to(cap.meter_pos)
+                            if d < min_dist:
+                                min_dist = d
+                    if min_dist != float('inf'):
+                        defender_dist = min_dist
+
             shot = {
                 "id": len(self.completed_shots) + len(self.active_shots),
                 "shooter_id": shooter_id,
@@ -178,7 +202,8 @@ class ShotTracker:
                 "start_px": start_ball.center.as_tuple(),
                 "apex_y": start_ball.center.y,
                 "status": "rising",
-                "target_hoop": 0 if start_ball.center.x > self.frame_w / 2 else 1
+                "target_hoop": 0 if start_ball.center.x > self.frame_w / 2 else 1,
+                "defender_dist": defender_dist
             }
 
             if shooter_id is not None and self.geometry and shooter_id in player_capsules:
@@ -192,6 +217,22 @@ class ShotTracker:
             else:
                 shot["zone"] = "Unknown"
                 shot["coord_m"] = None
+
+            # Calculate Expected Points (xPTS) and Shot Quality
+            is_three = shot.get("zone") and "three" in str(shot.get("zone")).lower()
+            if defender_dist > 2.5:
+                shot_quality = 0.38 if is_three else 0.65
+            elif defender_dist < 1.2:
+                shot_quality = 0.20 if is_three else 0.40
+            else:
+                # Interpolate between 1.2m and 2.5m
+                t = (defender_dist - 1.2) / (2.5 - 1.2)
+                q_min = 0.20 if is_three else 0.40
+                q_max = 0.38 if is_three else 0.65
+                shot_quality = q_min + t * (q_max - q_min)
+
+            shot["shot_quality"] = shot_quality
+            shot["expected_points"] = (3.0 if is_three else 2.0) * shot_quality
 
             self.active_shots.append(shot)
 
@@ -215,10 +256,23 @@ class ShotTracker:
                     shot["team"] = team
                     self.active_shots.remove(shot)
                     self.completed_shots.append(shot)
-                    self.scores[zi] += 2
-                    self.team_scores[team] += 2
+                    
+                    points = 3 if (shot.get("zone") and "three" in str(shot.get("zone")).lower()) else 2
+                    self.scores[zi] += points
+                    self.team_scores[team] += points
                     self.cooldown[zi] = self.cooldown_frames
-                    events.append((zi, self.scores[zi], team, self.team_scores[team]))
+                    
+                    events.append({
+                        "type": "SHOT_MAKE",
+                        "shooter_id": shot["shooter_id"],
+                        "team": team,
+                        "zone": shot["zone"],
+                        "coord_m": shot["coord_m"],
+                        "points": points,
+                        "shot_quality": round(shot.get("shot_quality", 0.5), 2),
+                        "expected_points": round(shot.get("expected_points", 1.0), 2),
+                        "defender_dist": round(shot.get("defender_dist", 999.0), 2)
+                    })
                     print(f"  🏀 MADE SHOT by Player {shot['shooter_id']} "
                           f"({team}) at zone {shot['zone']}!")
 
@@ -228,6 +282,18 @@ class ShotTracker:
                     shot["team"] = team
                     self.active_shots.remove(shot)
                     self.completed_shots.append(shot)
+                    
+                    events.append({
+                        "type": "SHOT_MISS",
+                        "shooter_id": shot["shooter_id"],
+                        "team": team,
+                        "zone": shot["zone"],
+                        "coord_m": shot["coord_m"],
+                        "points": 0,
+                        "shot_quality": round(shot.get("shot_quality", 0.5), 2),
+                        "expected_points": round(shot.get("expected_points", 1.0), 2),
+                        "defender_dist": round(shot.get("defender_dist", 999.0), 2)
+                    })
                     print(f"  ❌ MISSED SHOT by Player {shot['shooter_id']} "
                           f"({team}) from {shot['zone']}.")
 

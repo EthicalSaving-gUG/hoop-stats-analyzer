@@ -1,0 +1,14 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+numpy>=1.26
+opencv-python>=4.8
+Pillow>=10.0
+ultralytics>=8.4
+torch>=2.2
+easyocr>=1.7
+scikit-learn>=1.4
+mediapipe>=0.10
+onnxruntime>=1.18
+openvino>=2024.0
+pytest>=8.0

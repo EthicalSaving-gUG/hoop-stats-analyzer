@@ -1,15 +1,35 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileVideo, Activity, Target, Shield, CheckCircle, XCircle, Play, Video } from 'lucide-react';
+import {
+  UploadCloud,
+  FileVideo,
+  Activity,
+  Target,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Play,
+  Video,
+  Radio,
+  ClipboardList,
+  BrainCircuit,
+  WifiOff,
+  CheckCircle2,
+  Globe2,
+  BadgeInfo,
+  ScanLine,
+  Crosshair,
+} from 'lucide-react';
 import axios from 'axios';
 import ShotChart from './components/ShotChart';
 import AgentCard from './components/AgentCard';
 import LiveDashboard from './components/LiveDashboard';
 import ManualSetup from './components/ManualSetup';
 import ManualDashboard from './components/ManualDashboard';
-import ClientAIBenchmark from './components/ClientAIBenchmark';
+import GroundingReview from './components/GroundingReview';
+import { API_BASE } from './config';
 
-const API_BASE = 'http://localhost:8000';
+const ClientAIBenchmark = lazy(() => import('./components/ClientAIBenchmark'));
 
 function App() {
   // Top-level: MODE_SELECT -> UPLOAD/LIVE_SETUP -> PROCESSING/LIVE -> RESULTS
@@ -29,6 +49,34 @@ function App() {
   const [ruleset, setRuleset] = useState('fiba');
   const [processingFps, setProcessingFps] = useState(10);
   const [poseModel, setPoseModel] = useState('mediapipe');
+  const [health, setHealth] = useState(null);
+  const [apiError, setApiError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchHealth = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/health`, { timeout: 2500 });
+        if (!cancelled) {
+          setHealth(res.data);
+          setApiError('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setHealth(null);
+          setApiError('Backend nicht erreichbar');
+        }
+      }
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Poll for file analysis progress
   useEffect(() => {
@@ -38,9 +86,15 @@ function App() {
         try {
           const res = await axios.get(`${API_BASE}/analyze/progress/${jobId}`);
           if (res.data.status === 'error') { clearInterval(interval); return; }
+          if (res.data.error) {
+            clearInterval(interval);
+            setProgress(100);
+            setStatusMsg(res.data.error);
+            return;
+          }
           setProgress(res.data.progress);
           setStatusMsg(res.data.status);
-          if (res.data.progress === 100) {
+          if (res.data.progress === 100 && res.data.result_file) {
             clearInterval(interval);
             setTimeout(() => fetchResults(res.data.result_file), 1000);
           }
@@ -62,7 +116,7 @@ function App() {
       const res = await axios.post(`${API_BASE}/analyze/file`, formData);
       setJobId(res.data.job_id);
     } catch (error) {
-      setStatusMsg('Upload failed.');
+      setStatusMsg(error.response?.data?.detail || 'Upload fehlgeschlagen.');
       setAppState('UPLOAD');
     }
   };
@@ -122,15 +176,31 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen gradient-bg text-slate-100 flex flex-col items-center p-6 relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-orange-500/10 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
-
-      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center z-10 mb-10 mt-6">
-        <h1 className="text-5xl font-bold tracking-tight mb-2 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
-          Hoop Stats Pro
-        </h1>
-        <p className="text-slate-400 text-lg font-light tracking-wide">AI-Powered Basketball Analytics & Kampfgericht</p>
+    <div className="min-h-screen gradient-bg text-slate-100 flex flex-col items-center p-4 md:p-6 relative overflow-hidden">
+      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-7xl z-10 mb-8 mt-3">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2 text-orange-400">
+              Hoop Stats Pro
+            </h1>
+            <p className="text-slate-400 text-base md:text-lg font-light tracking-wide">Basketball-Analyse, Kampfbericht und AI-gestützte Review-Werkzeuge</p>
+          </div>
+          <div className="glass px-4 py-3 flex items-center gap-3 min-w-[280px]">
+            {health ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            ) : (
+              <WifiOff className="w-5 h-5 text-rose-400 shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">{health ? 'Backend bereit' : apiError || 'Backend prüft...'}</p>
+              <p className="text-xs text-slate-400 truncate">
+                {health
+                  ? `${health.selected_model}${health.selected_model_exists ? '' : ' fehlt'} · ${health.grounding?.backend || 'grounding aus'}`
+                  : API_BASE}
+              </p>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
       <AnimatePresence mode="wait">
@@ -138,39 +208,13 @@ function App() {
         {/* ─── MODE SELECT ─── */}
         {appState === 'MODE_SELECT' && (
           <motion.div key="mode" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-6xl z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            className="w-full max-w-7xl z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6"
           >
-            <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('UPLOAD')}
-              className="glass p-8 cursor-pointer text-center hover:border-orange-500/30 transition-all border-2 border-transparent"
-            >
-              <div className="text-5xl mb-4">📹</div>
-              <h2 className="text-2xl font-semibold mb-2">Video-Analyse</h2>
-              <p className="text-slate-400 text-sm">Lade ein Video hoch und erhalte detaillierte Spielerstatistiken, Shot Charts und Metriken.</p>
-            </motion.div>
-
-            <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('LIVE_SETUP')}
-              className="glass p-8 cursor-pointer text-center hover:border-orange-500/30 transition-all border-2 border-transparent"
-            >
-              <div className="text-5xl mb-4">🏟️</div>
-              <h2 className="text-2xl font-semibold mb-2">Live Kampfgericht</h2>
-              <p className="text-slate-400 text-sm">Starte die Echtzeit-Spielüberwachung mit 24s-Uhr, Spieluhr, Kampfbericht und Schiedsrichter.</p>
-            </motion.div>
-
-            <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('MANUAL_SETUP')}
-              className="glass p-8 cursor-pointer text-center hover:border-orange-500/30 transition-all border-2 border-transparent"
-            >
-              <div className="text-5xl mb-4">📝</div>
-              <h2 className="text-2xl font-semibold mb-2">Manueller Bericht</h2>
-              <p className="text-slate-400 text-sm">Video ansehen und Spielerstatistiken manuell auf einem Dashboard erfassen.</p>
-            </motion.div>
-
-            <motion.div whileHover={{ scale: 1.03 }} onClick={() => setAppState('CLIENT_AI_BENCHMARK')}
-              className="glass p-8 cursor-pointer text-center hover:border-indigo-500/30 transition-all border-2 border-transparent"
-            >
-              <div className="text-5xl mb-4">🧪</div>
-              <h2 className="text-2xl font-semibold mb-2">Browser-KI Benchmark</h2>
-              <p className="text-slate-400 text-sm">Testet die Videoanalyse direkt in deinem Browser (ohne Server-Upload).</p>
-            </motion.div>
+            <ModeCard icon={FileVideo} title="Video-Analyse" desc="Video hochladen und Offline-Statistiken, Shot Chart und Metriken erzeugen." onClick={() => setAppState('UPLOAD')} />
+            <ModeCard icon={Radio} title="Live Kampfgericht" desc="Echtzeit-Modus mit Spieluhr, Shot Clock, Agenten und Event-Review." onClick={() => setAppState('LIVE_SETUP')} />
+            <ModeCard icon={ClipboardList} title="Manueller Bericht" desc="Video ansehen und Spielerstatistiken direkt im Dashboard erfassen." onClick={() => setAppState('MANUAL_SETUP')} />
+            <ModeCard icon={Crosshair} title="LocateAnything" desc="Frames per Sprachprompt lokalisieren und Annotationen für Training/Review sichern." onClick={() => setAppState('GROUNDING_REVIEW')} accent="cyan" />
+            <ModeCard icon={BrainCircuit} title="Browser-KI Benchmark" desc="Lokale In-Browser-Inferenz testen, ohne Spielvideo an den Server zu senden." onClick={() => setAppState('CLIENT_AI_BENCHMARK')} accent="indigo" />
           </motion.div>
         )}
 
@@ -204,13 +248,13 @@ function App() {
               <div className="grid grid-cols-2 gap-4">
                 <motion.div whileHover={{ scale: 1.02 }} onClick={() => setRuleset('fiba')}
                   className={`glass p-5 cursor-pointer text-center transition-all border-2 ${ruleset === 'fiba' ? 'border-blue-500/50 bg-blue-500/5' : 'border-transparent'}`}>
-                  <span className="text-3xl block mb-2">🌍</span>
+                  <Globe2 className="w-8 h-8 mx-auto mb-2 text-blue-400" />
                   <h4 className="text-lg font-semibold">FIBA 2024</h4>
                   <p className="text-slate-400 text-xs mt-1">4×10 Min · 5 Fouls · Kein Def. 3-Sek</p>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} onClick={() => setRuleset('nba')}
                   className={`glass p-5 cursor-pointer text-center transition-all border-2 ${ruleset === 'nba' ? 'border-red-500/50 bg-red-500/5' : 'border-transparent'}`}>
-                  <span className="text-3xl block mb-2">🇺🇸</span>
+                  <BadgeInfo className="w-8 h-8 mx-auto mb-2 text-red-400" />
                   <h4 className="text-lg font-semibold">NBA 2024-25</h4>
                   <p className="text-slate-400 text-xs mt-1">4×12 Min · 6 Fouls · Def. 3-Sek Regel</p>
                 </motion.div>
@@ -260,7 +304,7 @@ function App() {
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass p-5 space-y-3 border-l-4 border-indigo-500">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
-                    🧍‍♂️ Körperhaltung-Modell (Pose Model)
+                    <ScanLine className="w-5 h-5 text-indigo-400" /> Körperhaltung-Modell
                   </h3>
                   <span className="text-xs uppercase tracking-widest text-indigo-400 font-bold px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">
                     Kombinierter Modus
@@ -279,7 +323,7 @@ function App() {
                         : 'border-transparent hover:bg-slate-800/30'
                     }`}
                   >
-                    <div className="text-2xl pt-1">⚡</div>
+                    <Activity className="w-6 h-6 pt-1 text-indigo-300 shrink-0" />
                     <div>
                       <h4 className="font-semibold text-slate-200">MediaPipe Pose</h4>
                       <p className="text-slate-400 text-xs mt-0.5">Leichtgewichtig & extrem schnell. Läuft flüssig auf Standard-CPUs ohne Grafikkarte.</p>
@@ -294,7 +338,7 @@ function App() {
                         : 'border-transparent hover:bg-slate-800/30'
                     }`}
                   >
-                    <div className="text-2xl pt-1">🌀</div>
+                    <BrainCircuit className="w-6 h-6 pt-1 text-indigo-300 shrink-0" />
                     <div>
                       <h4 className="font-semibold text-slate-200 flex items-center gap-1.5">
                         DensePose (Detectron2)
@@ -361,9 +405,16 @@ function App() {
           </motion.div>
         )}
 
+        {/* ─── LOCATEANYTHING REVIEW ─── */}
+        {appState === 'GROUNDING_REVIEW' && (
+          <GroundingReview onBack={() => setAppState('MODE_SELECT')} />
+        )}
+
         {/* ─── CLIENT AI BENCHMARK ─── */}
         {appState === 'CLIENT_AI_BENCHMARK' && (
-          <ClientAIBenchmark onBack={() => setAppState('MODE_SELECT')} />
+          <Suspense fallback={<div className="glass p-8 text-slate-300">Benchmark wird geladen...</div>}>
+            <ClientAIBenchmark onBack={() => setAppState('MODE_SELECT')} />
+          </Suspense>
         )}
 
         {/* ─── FILE UPLOAD ─── */}
@@ -400,10 +451,11 @@ function App() {
             <div className="w-full relative h-12 mt-2">
               <motion.div className="absolute bottom-0 text-3xl" initial={{ left: '0%' }} animate={{ left: `${progress}%` }}
                 transition={{ ease: "circOut", duration: 0.5 }} style={{ translateX: '-50%' }}>
-                <motion.div animate={{ y: [0, -25, 0], rotate: 360 }}
-                  transition={{ y: { repeat: Infinity, duration: 0.6, ease: "easeInOut" }, rotate: { repeat: Infinity, duration: 1.5, ease: "linear" } }}>
-                  🏀
-                </motion.div>
+                <motion.div
+                  className="w-6 h-6 rounded-full border-4 border-orange-400 bg-slate-950 shadow-lg"
+                  animate={{ y: [0, -22, 0], rotate: 360 }}
+                  transition={{ y: { repeat: Infinity, duration: 0.6, ease: "easeInOut" }, rotate: { repeat: Infinity, duration: 1.5, ease: "linear" } }}
+                />
               </motion.div>
             </div>
             <p className="text-slate-500 text-sm mt-6 font-mono font-medium">{progress}% Abgeschlossen</p>
@@ -467,6 +519,35 @@ function App() {
       </AnimatePresence>
     </div>
   )
+}
+
+function ModeCard({ icon: Icon, title, desc, onClick, accent = 'orange' }) {
+  const accentClass = accent === 'indigo'
+    ? 'hover:border-indigo-500/40'
+    : accent === 'cyan'
+      ? 'hover:border-cyan-500/40'
+      : 'hover:border-orange-500/40';
+  const iconClass = accent === 'indigo'
+    ? 'text-indigo-300'
+    : accent === 'cyan'
+      ? 'text-cyan-300'
+      : 'text-orange-300';
+
+  return (
+    <motion.button
+      type="button"
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.99 }}
+      onClick={onClick}
+      className={`glass p-6 cursor-pointer text-left transition-all border-2 border-transparent ${accentClass} min-h-[220px]`}
+    >
+      <div className="w-12 h-12 rounded-lg bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-5">
+        <Icon className={`w-6 h-6 ${iconClass}`} />
+      </div>
+      <h2 className="text-xl font-semibold mb-2 text-slate-100">{title}</h2>
+      <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+    </motion.button>
+  );
 }
 
 function StatBox({ label, value, subtext, highlight }) {

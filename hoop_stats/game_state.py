@@ -60,7 +60,6 @@ class GameState:
         self.events: List[GameEvent] = []
 
         # ── Player / Pose Stats ─────────────────────────────────────────────
-        self.player_fouls: Dict[str, int] = {}   # player_id -> fouls
         self.active_players: set = set()         # Set of player IDs currently on court
         self.substitution_window_open_until: float = 0.0  # Timestamp when window closes
         self.player_stats: Dict[str, Any] = {
@@ -69,6 +68,12 @@ class GameState:
                 "knee_angle": 0.0,
                 "status": "Idle"
             }
+        }
+        
+        # ── Court Tracking Telemetry ──────────────────────────────────────────
+        self.court_tracking = {
+            "ball": None,        # [x_m, y_m]
+            "players": {},       # player_id -> {"team": "home"/"away", "pos": [x_m, y_m]}
         }
         # { player_id: { "name": "", "jersey": "", "team": "", "points": 0,
         #                "fouls": 0, "fg_made": 0, "fg_att": 0, ... } }
@@ -159,6 +164,7 @@ class GameState:
                 "ruleset": self.rules.name,
                 "personal_foul_limit": self.rules.personal_foul_limit,
                 "biomechanics": self.player_stats["biomechanics_live"],
+                "court_tracking": self.court_tracking,
                 "recent_events": [
                     {
                         "time": e.timestamp,

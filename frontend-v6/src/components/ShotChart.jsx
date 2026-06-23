@@ -73,9 +73,10 @@ const ShotChart = ({ shots, title = "Shot Chart" }) => {
                                 strokeWidth="1"
                                 className="cursor-pointer"
                             >
-                                <title>{`Player ${shot.shooter_id}: ${isMade ? 'Make' : 'Miss'} from ${shot.zone}`}</title>
+                                <title>{`Spieler ${shot.shooter_id}: ${isMade ? 'Treffer' : 'Fehlwurf'} (${shot.zone})\nxPTS: ${shot.expected_points ?? 'N/A'}\nQualität: ${shot.shot_quality ? Math.round(shot.shot_quality * 100) + '%' : 'N/A'}\nVerteidiger: ${shot.defender_dist ? shot.defender_dist.toFixed(1) + 'm' : 'N/A'}`}</title>
                             </motion.circle>
                         );
+
                     })}
                 </svg>
             </div>
