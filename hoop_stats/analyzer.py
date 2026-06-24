@@ -91,10 +91,15 @@ class BasketballAnalyzer:
                         self.player_metadata[obj_id] = {"jersey": "Unknown", "team": "TBD"}
 
                     if self.player_metadata[obj_id].get("jersey", "Unknown") == "Unknown":
-                        crop   = self.detector.get_jersey_crop(frame, capsule)
-                        number = self.ocr.identify_number(crop)
-                        if number:
-                            self.player_metadata[obj_id]["jersey"] = number
+                        if self.player_metadata[obj_id].get("ocr_cooldown", 0) > 0:
+                            self.player_metadata[obj_id]["ocr_cooldown"] -= 1
+                        else:
+                            crop   = self.detector.get_jersey_crop(frame, capsule)
+                            number = self.ocr.identify_number(crop)
+                            if number:
+                                self.player_metadata[obj_id]["jersey"] = number
+                            else:
+                                self.player_metadata[obj_id]["ocr_cooldown"] = 30
 
                     # ── Jersey color (sampled every 30 frames) ────────────
                     if frame_idx % 30 == 0:
@@ -188,7 +193,7 @@ class BasketballAnalyzer:
                     summary[team]["FGA"] += 1
                     if shot["status"] == "made":
                         summary[team]["FGM"] += 1
-                    
+
                     if shot["zone"] in ("three_point", "3PT Wing"):
                         summary[team]["3PA"] += 1
                         if shot["status"] == "made":
@@ -199,7 +204,7 @@ class BasketballAnalyzer:
             accels = s["avg_max_accel"]
             s["avg_max_speed"] = float(round(sum(speeds)/len(speeds), 2)) if speeds else 0.0
             s["avg_max_accel"] = float(round(sum(accels)/len(accels), 2)) if accels else 0.0
-            
+
             fga = s["FGA"]
             fgm = s["FGM"]
             tpm = s["3PM"]
@@ -219,7 +224,7 @@ class BasketballAnalyzer:
         progress_callback=None
     ):
         """
-        Accelerated pipeline that splits the video into segments processed in 
+        Accelerated pipeline that splits the video into segments processed in
         parallel worker processes using Region-Of-Interest (ROI) optical tracking.
 
         Parameters
@@ -313,7 +318,7 @@ class BasketballAnalyzer:
             # Merge scoring (sum per hoop zone)
             for zi, pts in enumerate(partial["scores"]):
                 self.shot_tracker.scores[zi] += pts
-            
+
             # Merge completed shots
             if "shots" in partial:
                 self.shot_tracker.completed_shots.extend(partial["shots"])
@@ -356,31 +361,36 @@ def _segment_worker(args):
     player_colors   = {}
 
     for frame_idx, frame in read_segment(video_path, start_frame, end_frame, skip_frames):
-        
+
         # ── Detect using YOLO (periodically) ──────────────────────────────
         if frame_idx % yolo_interval == 0 or tracker.active_count == 0:
             tracker.clear()
-            
+
             # Detect Players
             det_results = detector.model.track(
                 frame, persist=True, classes=[0], verbose=False, conf=0.35, tracker="botsort.yaml"
             )
-            
+
             if det_results[0].boxes.id is not None:
                 boxes = det_results[0].boxes.xyxy.cpu().numpy()
                 ids   = det_results[0].boxes.id.cpu().numpy().astype(int)
 
                 for box, obj_id in zip(boxes, ids):
                     tracker.add_tracker(frame, box, obj_id)
-                    
+
                     if obj_id not in player_metadata:
                         player_metadata[obj_id] = {"jersey": "Unknown", "team": "TBD"}
 
                     if player_metadata[obj_id].get("jersey", "Unknown") == "Unknown":
-                        crop   = detector.get_jersey_crop(frame, box)
-                        number = ocr.identify_number(crop)
-                        if number:
-                            player_metadata[obj_id]["jersey"] = number
+                        if player_metadata[obj_id].get("ocr_cooldown", 0) > 0:
+                            player_metadata[obj_id]["ocr_cooldown"] -= 1
+                        else:
+                            crop   = detector.get_jersey_crop(frame, box)
+                            number = ocr.identify_number(crop)
+                            if number:
+                                player_metadata[obj_id]["jersey"] = number
+                            else:
+                                player_metadata[obj_id]["ocr_cooldown"] = 30
 
                     # Sample color during YOLO pulses
                     color = get_dominant_jersey_color(frame, box)
@@ -392,9 +402,9 @@ def _segment_worker(args):
             for i, b_box in enumerate(ball_boxes_raw):
                 # Use negative IDs for balls
                 tracker.add_tracker(frame, b_box, -1 - i)
-                
+
             updated_boxes = tracker.update(frame) # init first frame outputs
-            
+
         else:
             # ── Track using CSRT (Fast) ───────────────────────────────────
             updated_boxes = tracker.update(frame)
