@@ -5,7 +5,15 @@ import uvicorn
 import shutil
 import os
 import uuid
+import re
 from hoop_stats.analyzer import BasketballAnalyzer
+
+def secure_filename(filename: str) -> str:
+    """Sanitize a filename to prevent path traversal."""
+    filename = os.path.basename(filename)
+    filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', filename)
+    return filename
+
 from hoop_stats.primitive_renderer import PrimitiveRenderer
 from hoop_stats.game_state import GameState
 from hoop_stats.stream_manager import StreamManager
@@ -62,10 +70,11 @@ def run_background_visualize(job_id: str, file_path: str, output_path: str, mode
 async def analyze_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    safe_filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    output_name = f"results/stats_{file.filename.split('.')[0]}_{job_id[:8]}"
+    output_name = f"results/stats_{safe_filename.split('.')[0]}_{job_id[:8]}"
     calibration = {
         "video": [[100, 100], [1100, 100], [100, 900], [1100, 900]],
         "real": [[0, 0], [28, 0], [0, 15], [28, 15]]
@@ -82,10 +91,11 @@ async def visualize_file(
     """Render a primitives-only visualization video. mode = 'wireframe' or 'overlay'."""
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    safe_filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    output_path = f"results/viz_{file.filename.split('.')[0]}_{job_id[:8]}.mp4"
+    output_path = f"results/viz_{safe_filename.split('.')[0]}_{job_id[:8]}.mp4"
     background_tasks.add_task(run_background_visualize, job_id, file_path, output_path, mode)
     return {"status": "success", "job_id": job_id}
 
@@ -108,10 +118,11 @@ async def export3d_file(
     """Export per-frame 3D primitive vectors as JSON (no video rendering)."""
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None}
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    safe_filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    output_path = f"results/vectors3d_{file.filename.split('.')[0]}_{job_id[:8]}.json"
+    output_path = f"results/vectors3d_{safe_filename.split('.')[0]}_{job_id[:8]}.json"
     background_tasks.add_task(run_background_export3d, job_id, file_path, output_path)
     return {"status": "success", "job_id": job_id}
 
@@ -301,10 +312,11 @@ async def manual_export():
 
 @app.post("/manual/upload-video")
 async def manual_upload_video(file: UploadFile = File(...)):
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    safe_filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, safe_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-    return {"video_url": f"http://localhost:8000/uploads/{file.filename}"}
+    return {"video_url": f"http://localhost:8000/uploads/{safe_filename}"}
 
 # ── Legacy stream endpoint ──────────────────────────────────────────────────
 @app.post("/analyze/stream")
