@@ -94,82 +94,92 @@ class RimDetector:
         Find potential rim circles in the frame using color + shape.
         Returns list of (cx, cy, radius) tuples.
         """
-        # 1. Color mask for orange/red
+        mask = self._get_color_mask(frame)
+        candidates = self._find_candidates_from_mask(mask)
+
+        # If color detection fails to find 2 rims, try Hough circles on edges
+        if len(candidates) < 2:
+            candidates = self._find_candidates_from_hough(frame, candidates)
+
+        return candidates
+
+    def _get_color_mask(self, frame: np.ndarray) -> np.ndarray:
+        """Create a cleaned up color mask for orange/red rims."""
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask1 = cv2.inRange(hsv, self.rim_hsv_lower1, self.rim_hsv_upper1)
         mask2 = cv2.inRange(hsv, self.rim_hsv_lower2, self.rim_hsv_upper2)
         mask = mask1 | mask2
 
-        # 2. Clean up the mask
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+        return mask
 
-        # 3. Find contours in the orange mask
+    def _find_candidates_from_mask(self, mask: np.ndarray) -> List[Tuple[float, float, float]]:
+        """Find and filter contours from the color mask."""
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
         candidates = []
+
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area < 200:  # too small
+            if area < 200:
                 continue
 
-            # Fit a minimum enclosing circle
             (cx, cy), radius = cv2.minEnclosingCircle(contour)
 
-            # Filter by size
             if radius < self.min_rim_radius or radius > self.max_rim_radius:
                 continue
 
-            # Filter by circularity (rim should be roughly circular/elliptical)
             perimeter = cv2.arcLength(contour, True)
             if perimeter == 0:
                 continue
+
             circularity = 4 * np.pi * area / (perimeter * perimeter)
-            if circularity < 0.2:  # very non-circular, skip
+            if circularity < 0.2:
                 continue
 
-            # Filter by position: rim should be in the upper half of the frame
-            # (rims are at ~3.05m height, usually in top 60% of frame)
+            # rims are usually in top 70% of frame
             if cy > self.frame_h * 0.7:
                 continue
 
             candidates.append((float(cx), float(cy), float(radius)))
 
-        # 4. If color detection fails, try Hough circles on edges
-        if len(candidates) < 2:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (9, 9), 2)
+        return candidates
 
-            # Only look in the upper portion of the frame and near the edges
-            search_regions = [
-                (0, int(self.frame_w * 0.3), 0, int(self.frame_h * 0.6)),  # left
-                (int(self.frame_w * 0.7), self.frame_w, 0, int(self.frame_h * 0.6)),  # right
-            ]
+    def _find_candidates_from_hough(
+        self, frame: np.ndarray, candidates: List[Tuple[float, float, float]]
+    ) -> List[Tuple[float, float, float]]:
+        """Use Hough circles as a fallback when color detection fails."""
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (9, 9), 2)
 
-            for x1, x2, y1, y2 in search_regions:
-                roi = blur[y1:y2, x1:x2]
-                circles = cv2.HoughCircles(
-                    roi, cv2.HOUGH_GRADIENT, dp=1.5,
-                    minDist=50,
-                    param1=100, param2=40,
-                    minRadius=self.min_rim_radius,
-                    maxRadius=self.max_rim_radius,
-                )
-                if circles is not None:
-                    for circle in circles[0]:
-                        cx, cy, r = circle
-                        # Adjust coordinates back to full frame
-                        cx += x1
-                        cy += y1
-                        # Check if this is a new candidate (not too close to existing ones)
-                        is_new = True
-                        for ex_cx, ex_cy, _ in candidates:
-                            if abs(cx - ex_cx) < 30 and abs(cy - ex_cy) < 30:
-                                is_new = False
-                                break
-                        if is_new:
-                            candidates.append((float(cx), float(cy), float(r)))
+        search_regions = [
+            (0, int(self.frame_w * 0.3), 0, int(self.frame_h * 0.6)),  # left
+            (int(self.frame_w * 0.7), self.frame_w, 0, int(self.frame_h * 0.6)),  # right
+        ]
+
+        for x1, x2, y1, y2 in search_regions:
+            roi = blur[y1:y2, x1:x2]
+            circles = cv2.HoughCircles(
+                roi, cv2.HOUGH_GRADIENT, dp=1.5,
+                minDist=50, param1=100, param2=40,
+                minRadius=self.min_rim_radius,
+                maxRadius=self.max_rim_radius,
+            )
+
+            if circles is not None:
+                for circle in circles[0]:
+                    cx, cy, r = circle
+                    cx += x1
+                    cy += y1
+
+                    is_new = True
+                    for ex_cx, ex_cy, _ in candidates:
+                        if abs(cx - ex_cx) < 30 and abs(cy - ex_cy) < 30:
+                            is_new = False
+                            break
+                    if is_new:
+                        candidates.append((float(cx), float(cy), float(r)))
 
         return candidates
 
