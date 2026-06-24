@@ -7,7 +7,7 @@ and then use CSRT to track the regions of interest (ROI) frame-by-frame.
 """
 
 import cv2
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 class MultiRoiTracker:
     def __init__(self):
