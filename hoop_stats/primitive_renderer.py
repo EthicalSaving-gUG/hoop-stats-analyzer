@@ -24,7 +24,7 @@ from .camera3d import Camera3D, make_virtual_camera, COURT_WIDTH_M, COURT_DEPTH_
 from .detector import HoopDetector
 from .geometry import CourtGeometry
 from .rim_detector import RimDetector
-from .shot_tracker import ShotTracker
+from .shot_tracker import ShotTracker, ShotTrackerConfig
 from .video_utils import get_video_info
 
 
@@ -554,7 +554,7 @@ class PrimitiveRenderer:
 
         # Init detector, shot tracker, and rim detector
         detector = HoopDetector()
-        shot_tracker = ShotTracker(fw, fh, fps=fps)
+        shot_tracker = ShotTracker(fw, fh, config=ShotTrackerConfig(fps=fps))
         rim_det = RimDetector(fw, fh)
 
         # Output writer
@@ -772,7 +772,7 @@ class PrimitiveRenderer:
 
         # Init detector, shot tracker, and camera FIRST
         detector = HoopDetector()
-        shot_tracker = ShotTracker(fw, fh, fps=fps)
+        shot_tracker = ShotTracker(fw, fh, config=ShotTrackerConfig(fps=fps))
         rim_det = RimDetector(fw, fh)
         cam = Camera3D(fw, fh)
 
