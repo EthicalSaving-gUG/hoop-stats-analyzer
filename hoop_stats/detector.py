@@ -17,13 +17,13 @@ class HoopDetector:
         optimized_model_path = model_variant
 
         # ── Hardware Auto-Detection & Optimization ────────────────────
-        
+
         # 1. Check for NVIDIA CUDA
         if torch.cuda.is_available():
             self.device_name = f"GPU (CUDA: {torch.cuda.get_device_name(0)})"
             self.model = base_model
             # PyTorch runs fine natively on CUDA, no export needed
-            
+
         # 2. Check for Windows DirectML (AMD/Intel GPUs)
         else:
             try:
@@ -43,7 +43,9 @@ class HoopDetector:
             # 3. If no GPU, optimize for CPU using OpenVINO
             if self.device_name == "CPU":
                 try:
-                    import openvino
+                    import importlib.util
+                    if importlib.util.find_spec('openvino') is None:
+                        raise ImportError
                     self.device_name = "CPU (OpenVINO Optimized)"
                     ov_dir = model_variant.replace('.pt', '_openvino_model/')
                     if not os.path.exists(ov_dir):
@@ -52,7 +54,7 @@ class HoopDetector:
                     optimized_model_path = ov_dir
                 except ImportError:
                     pass
-                    
+
             # Load the optimized model
             if optimized_model_path != model_variant:
                 self.model = YOLO(optimized_model_path, task='detect')
