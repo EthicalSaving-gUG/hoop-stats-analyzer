@@ -20,6 +20,8 @@ class ScoresheetAgent(BaseAgent):
         self._shot_tracker = None
         self._last_event_count = 0
         self._known_players = set()
+        self._missing_frames = {}
+        self._flicker_threshold = 30
 
     def on_start(self):
         self._detector = HoopDetector()
@@ -65,12 +67,27 @@ class ScoresheetAgent(BaseAgent):
         self.game_state.active_players = current_players
 
         # Track substitutions
-        new_in = current_players - self._known_players
-        new_out = self._known_players - current_players
+        for pid in current_players:
+            self._missing_frames[pid] = 0
+
+        new_in = set()
+        for pid in current_players:
+            if pid not in self._known_players:
+                self._known_players.add(pid)
+                new_in.add(pid)
+
+        new_out = set()
+        for pid in list(self._known_players):
+            if pid not in current_players:
+                self._missing_frames[pid] = self._missing_frames.get(pid, 0) + 1
+                if self._missing_frames[pid] > self._flicker_threshold:
+                    self._known_players.remove(pid)
+                    new_out.add(pid)
+                    if pid in self._missing_frames:
+                        del self._missing_frames[pid]
 
         # Phase 8: Official Substitutions.
         # Only log these if the referee authorized a substitution recently.
-        # Otherwise, we just silently update _known_players to fix tracking flickering.
         if self._known_players and self.game_state.is_substitution_window_open:
             for pid in new_in:
                 self.game_state.append_event(
@@ -84,8 +101,6 @@ class ScoresheetAgent(BaseAgent):
                         self.AGENT_NAME, "OFFICIAL_SUB_OUT",
                         {"player_id": pid}, frame_idx
                     )
-
-        self._known_players = current_players
 
         # Detect ball + update shot tracker
         ball_boxes = self._detector.detect_ball(frame)
