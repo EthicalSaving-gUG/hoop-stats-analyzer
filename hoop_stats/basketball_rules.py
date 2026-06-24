@@ -4,7 +4,7 @@ Basketball Rule Sets — FIBA 2024 and NBA 2024/25.
 Provides dataclass-based rule configurations that agents use
 to enforce the correct thresholds for each league.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict
 
 
