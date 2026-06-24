@@ -10,7 +10,7 @@ from .team_colors import get_dominant_jersey_color, assign_teams_by_color
 from .shot_tracker import ShotTracker
 from .roi_tracker import MultiRoiTracker
 from .video_utils import get_video_info, get_segment_ranges, read_segment
-from .primitives import Ball, PlayerCapsule, Point2D, bbox_to_ball, bbox_to_player
+from .primitives import Point2D, bbox_to_ball, bbox_to_player
 
 class BasketballAnalyzer:
     def __init__(self, video_path, output_name="game_stats"):
@@ -339,7 +339,7 @@ def _segment_worker(args):
     from .shot_tracker import ShotTracker
     from .roi_tracker import MultiRoiTracker
     from .video_utils import get_video_info, read_segment
-    from .primitives import Ball, PlayerCapsule, Point2D, bbox_to_ball, bbox_to_player
+    from .primitives import Point2D, bbox_to_ball, bbox_to_player
 
     info     = get_video_info(video_path)
     fps      = info["fps"]
