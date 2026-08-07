@@ -31,3 +31,8 @@ output_stats.json
 models/
 runs/
 *_openvino_model/
+
+# Graphify local caches
+graphify-out/.graphify_python
+graphify-out/cache/
+

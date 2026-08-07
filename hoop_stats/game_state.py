@@ -4,6 +4,7 @@ All agents read/write through this central state object.
 """
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 from .basketball_rules import BasketballRules, FIBA_RULES
@@ -15,8 +16,13 @@ class GameEvent:
     timestamp: float          # time.time()
     agent: str                # e.g. "shot_clock", "game_clock", "scoresheet", "referee"
     event_type: str           # e.g. "SCORE", "FOUL", "VIOLATION", "QUARTER_END"
+    event_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     data: Dict[str, Any] = field(default_factory=dict)
     frame_ref: Optional[int] = None   # video frame index for replay
+    confidence: Optional[float] = None
+    evidence: Dict[str, Any] = field(default_factory=dict)
+    review_status: str = "pending"
+    source_camera: Optional[str] = None
 
 
 class GameState:
@@ -80,12 +86,22 @@ class GameState:
 
     # ── Thread-safe helpers ─────────────────────────────────────────────────
 
-    def append_event(self, agent: str, event_type: str,
-                     data: dict = None, frame_ref: int = None):
+    def append_event(
+        self,
+        agent: str,
+        event_type: str,
+        data: dict = None,
+        frame_ref: int = None,
+        confidence: float = None,
+        evidence: dict = None,
+        review_status: str = "pending",
+        source_camera: str = None,
+    ):
         with self._lock:
+            event_data = data or {}
             # Check for referee substitution signal to open the 15-second window
             if agent == "referee_signals" and event_type == "REFEREE_SIGNAL":
-                signal = (data or {}).get("signal", "")
+                signal = event_data.get("signal", "")
                 if "Substitution" in signal:
                     self.substitution_window_open_until = time.time() + 15.0
 
@@ -93,8 +109,12 @@ class GameState:
                 timestamp=time.time(),
                 agent=agent,
                 event_type=event_type,
-                data=data or {},
+                data=event_data,
                 frame_ref=frame_ref,
+                confidence=confidence if confidence is not None else event_data.get("confidence"),
+                evidence=evidence or event_data.get("evidence", {}),
+                review_status=event_data.get("review_status", review_status),
+                source_camera=source_camera or event_data.get("source_camera"),
             )
             self.events.append(evt)
             return evt
@@ -167,10 +187,16 @@ class GameState:
                 "court_tracking": self.court_tracking,
                 "recent_events": [
                     {
+                        "id": e.event_id,
                         "time": e.timestamp,
                         "agent": e.agent,
                         "type": e.event_type,
                         "data": e.data,
+                        "frame_ref": e.frame_ref,
+                        "confidence": e.confidence,
+                        "evidence": e.evidence,
+                        "review_status": e.review_status,
+                        "source_camera": e.source_camera,
                     }
                     for e in self.events[-20:]   # last 20 events
                 ],

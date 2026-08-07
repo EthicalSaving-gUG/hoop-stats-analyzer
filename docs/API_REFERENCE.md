@@ -155,3 +155,66 @@ Antwort:
   "labels": 1
 }
 ```
+
+### `POST /grounding/annotation/{annotation_file}/boxes/{box_id}/review`
+
+Speichert Review-Status pro Grounding-Box.
+
+Body:
+
+```json
+{"review_status": "accepted", "review_note": "rim ok"}
+```
+
+Erlaubte Statuswerte: `pending`, `accepted`, `rejected`, `needs_review`.
+
+## Review
+
+### `GET /review/events`
+
+Listet Live-Events und optional Offline-Events aus einem Analyse-Resultat.
+
+Query:
+
+- `result_file`: optionaler Dateiname unter `results/`
+
+### `POST /review/events/{event_id}`
+
+Speichert Review-Status eines Events.
+
+```json
+{"review_status": "accepted", "review_note": "checked"}
+```
+
+## Video Frames
+
+### `POST /video/extract-frame`
+
+Extrahiert einen Frame aus einem lokalen oder hochgeladenen Video.
+
+```json
+{"video_url": "uploads/game.mp4", "timestamp": 12.5}
+```
+
+Antwort enthaelt `image_url` unter `/results/frames/...`.
+
+## Calibration & Quality
+
+### `GET /calibration`
+
+Liefert aktuell gespeicherte Court-Kalibrierung.
+
+### `POST /calibration`
+
+Speichert Matching-Punkte:
+
+```json
+{
+  "video": [[100, 100], [1100, 100], [100, 900], [1100, 900]],
+  "real": [[0, 0], [28, 0], [0, 15], [28, 15]]
+}
+```
+
+### `GET /quality`
+
+Liefert Kamera-, Job-, Review- und Warnstatus fuer das Datenqualitaets-Dashboard.

@@ -19,6 +19,8 @@ import {
   BadgeInfo,
   ScanLine,
   Crosshair,
+  ListChecks,
+  Gauge,
 } from 'lucide-react';
 import axios from 'axios';
 import ShotChart from './components/ShotChart';
@@ -27,6 +29,8 @@ import LiveDashboard from './components/LiveDashboard';
 import ManualSetup from './components/ManualSetup';
 import ManualDashboard from './components/ManualDashboard';
 import GroundingReview from './components/GroundingReview';
+import ReviewQueue from './components/ReviewQueue';
+import QualityDashboard from './components/QualityDashboard';
 import { API_BASE } from './config';
 
 const ClientAIBenchmark = lazy(() => import('./components/ClientAIBenchmark'));
@@ -38,6 +42,7 @@ function App() {
   const [progress, setProgress] = useState(0);
   const [statusMsg, setStatusMsg] = useState('');
   const [resultsData, setResultsData] = useState(null);
+  const [lastResultFile, setLastResultFile] = useState('');
 
   // Kampfgericht config
   const [enabledAgents, setEnabledAgents] = useState({
@@ -125,6 +130,7 @@ function App() {
     try {
       const res = await axios.get(`${API_BASE}/results/${resultFileName}`);
       setResultsData(res.data);
+      setLastResultFile(resultFileName);
       setAppState('RESULTS');
     } catch (e) {
       setStatusMsg('Could not load results.');
@@ -208,12 +214,14 @@ function App() {
         {/* ─── MODE SELECT ─── */}
         {appState === 'MODE_SELECT' && (
           <motion.div key="mode" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-7xl z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6"
+            className="w-full max-w-7xl z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6"
           >
             <ModeCard icon={FileVideo} title="Video-Analyse" desc="Video hochladen und Offline-Statistiken, Shot Chart und Metriken erzeugen." onClick={() => setAppState('UPLOAD')} />
             <ModeCard icon={Radio} title="Live Kampfgericht" desc="Echtzeit-Modus mit Spieluhr, Shot Clock, Agenten und Event-Review." onClick={() => setAppState('LIVE_SETUP')} />
             <ModeCard icon={ClipboardList} title="Manueller Bericht" desc="Video ansehen und Spielerstatistiken direkt im Dashboard erfassen." onClick={() => setAppState('MANUAL_SETUP')} />
             <ModeCard icon={Crosshair} title="LocateAnything" desc="Frames per Sprachprompt lokalisieren und Annotationen für Training/Review sichern." onClick={() => setAppState('GROUNDING_REVIEW')} accent="cyan" />
+            <ModeCard icon={ListChecks} title="Review-Queue" desc="AI-Events bestaetigen, verwerfen und fuer Export markieren." onClick={() => setAppState('REVIEW_QUEUE')} accent="emerald" />
+            <ModeCard icon={Gauge} title="Qualitaet" desc="Kameras, Warnungen, Jobs und Court Calibration pruefen." onClick={() => setAppState('QUALITY_DASHBOARD')} accent="blue" />
             <ModeCard icon={BrainCircuit} title="Browser-KI Benchmark" desc="Lokale In-Browser-Inferenz testen, ohne Spielvideo an den Server zu senden." onClick={() => setAppState('CLIENT_AI_BENCHMARK')} accent="indigo" />
           </motion.div>
         )}
@@ -410,6 +418,16 @@ function App() {
           <GroundingReview onBack={() => setAppState('MODE_SELECT')} />
         )}
 
+        {/* ─── REVIEW QUEUE ─── */}
+        {appState === 'REVIEW_QUEUE' && (
+          <ReviewQueue onBack={() => setAppState('MODE_SELECT')} resultFile={lastResultFile} />
+        )}
+
+        {/* ─── QUALITY DASHBOARD ─── */}
+        {appState === 'QUALITY_DASHBOARD' && (
+          <QualityDashboard onBack={() => setAppState('MODE_SELECT')} />
+        )}
+
         {/* ─── CLIENT AI BENCHMARK ─── */}
         {appState === 'CLIENT_AI_BENCHMARK' && (
           <Suspense fallback={<div className="glass p-8 text-slate-300">Benchmark wird geladen...</div>}>
@@ -470,6 +488,9 @@ function App() {
               <button onClick={() => setAppState('MODE_SELECT')} className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold transition-colors">
                 Neue Analyse
               </button>
+              <button onClick={() => setAppState('REVIEW_QUEUE')} className="px-5 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold transition-colors">
+                Events reviewen
+              </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {resultsData.team_summary && Object.entries(resultsData.team_summary).map(([teamName, stats]) => (
@@ -526,11 +547,19 @@ function ModeCard({ icon: Icon, title, desc, onClick, accent = 'orange' }) {
     ? 'hover:border-indigo-500/40'
     : accent === 'cyan'
       ? 'hover:border-cyan-500/40'
+      : accent === 'emerald'
+        ? 'hover:border-emerald-500/40'
+        : accent === 'blue'
+          ? 'hover:border-blue-500/40'
       : 'hover:border-orange-500/40';
   const iconClass = accent === 'indigo'
     ? 'text-indigo-300'
     : accent === 'cyan'
       ? 'text-cyan-300'
+      : accent === 'emerald'
+        ? 'text-emerald-300'
+        : accent === 'blue'
+          ? 'text-blue-300'
       : 'text-orange-300';
 
   return (

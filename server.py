@@ -34,8 +34,19 @@ from hoop_stats.agents.referee_signals_agent import RefereeSignalsAgent
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
 UPLOAD_DIR = BASE_DIR / "uploads"
+FRAMES_DIR = RESULTS_DIR / "frames"
+ANNOTATIONS_DIR = RESULTS_DIR / "annotations"
+LABELS_DIR = RESULTS_DIR / "labels"
+REVIEW_STATE_FILE = RESULTS_DIR / "review_state.json"
+CALIBRATION_FILE = RESULTS_DIR / "court_calibration.json"
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm"}
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+REVIEW_STATUSES = {"pending", "accepted", "rejected", "needs_review"}
+
+DEFAULT_CALIBRATION = {
+    "video": [[100, 100], [1100, 100], [100, 900], [1100, 900]],
+    "real": [[0, 0], [28, 0], [0, 15], [28, 15]],
+}
 
 app = FastAPI()
 
@@ -51,6 +62,9 @@ app.mount("/results", StaticFiles(directory=str(RESULTS_DIR)), name="results")
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+FRAMES_DIR.mkdir(exist_ok=True)
+ANNOTATIONS_DIR.mkdir(exist_ok=True)
+LABELS_DIR.mkdir(exist_ok=True)
 
 # ── Analysis Jobs (file upload mode) ────────────────────────────────────────
 JOBS = {}
@@ -131,6 +145,129 @@ def _safe_result_child(base_dir: Path, filename: str, allowed_suffixes: set[str]
         raise ValueError("Unsupported result file")
     return candidate
 
+def _read_json_file(path: Path, default):
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return default
+
+def _write_json_file(path: Path, data) -> None:
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+def _load_review_state() -> dict:
+    return _read_json_file(REVIEW_STATE_FILE, {"events": {}, "annotations": {}})
+
+def _save_review_state(state: dict) -> None:
+    _write_json_file(REVIEW_STATE_FILE, state)
+
+def _load_calibration() -> dict:
+    calibration = _read_json_file(CALIBRATION_FILE, DEFAULT_CALIBRATION)
+    if "video" not in calibration or "real" not in calibration:
+        return DEFAULT_CALIBRATION
+    return calibration
+
+def _quality_summary() -> dict:
+    connected = 0
+    cameras = {}
+    if STREAM_MGR:
+        for cam_id in STREAM_MGR.list_cameras():
+            info = STREAM_MGR.get_info(cam_id)
+            cameras[cam_id] = info
+            if info.get("connected"):
+                connected += 1
+
+    warnings = []
+    if STREAM_MGR and connected == 0:
+        warnings.append("Keine Kameraquelle verbunden")
+    if not Path(resolve_model_variant()).exists():
+        warnings.append("Gewaehltes YOLO-Modell fehlt lokal")
+    if grounding_status()["enabled"] is False:
+        warnings.append("LocateAnything Grounding ist deaktiviert")
+
+    event_count = len(GAME_STATE.events) if GAME_STATE else 0
+    pending_reviews = 0
+    if GAME_STATE:
+        pending_reviews = sum(1 for event in GAME_STATE.events if event.review_status == "pending")
+    review_state = _load_review_state()
+    pending_reviews += sum(
+        1 for item in review_state.get("annotations", {}).values()
+        if item.get("review_status") == "pending"
+    )
+
+    return {
+        "cameras": cameras,
+        "connected_cameras": connected,
+        "total_cameras": len(cameras),
+        "events": event_count,
+        "pending_reviews": pending_reviews,
+        "jobs": JOBS,
+        "warnings": warnings,
+    }
+
+def _event_to_review_dict(event, overrides: dict = None) -> dict:
+    overrides = overrides or {}
+    return {
+        "id": event.event_id,
+        "source": "live",
+        "agent": event.agent,
+        "type": event.event_type,
+        "time": event.timestamp,
+        "frame_ref": event.frame_ref,
+        "data": event.data,
+        "confidence": event.confidence,
+        "evidence": event.evidence,
+        "review_status": overrides.get("review_status", event.review_status),
+        "review_note": overrides.get("review_note", ""),
+        "source_camera": event.source_camera,
+    }
+
+def _offline_events_from_result(result_file: str) -> list[dict]:
+    result_path = _safe_result_child(RESULTS_DIR, result_file, {".json"})
+    if not result_path.exists():
+        raise FileNotFoundError(result_file)
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    events = []
+    for idx, shot in enumerate(payload.get("shots", [])):
+        event_id = f"{result_path.stem}:shot:{idx}"
+        status = shot.get("status")
+        events.append({
+            "id": event_id,
+            "source": "offline",
+            "agent": "analyzer",
+            "type": "SHOT_MAKE" if status == "made" else "SHOT_MISS",
+            "time": None,
+            "frame_ref": shot.get("start_frame"),
+            "data": shot,
+            "confidence": shot.get("confidence"),
+            "evidence": {"result_file": result_path.name},
+            "review_status": "pending",
+            "review_note": "",
+            "source_camera": None,
+        })
+    return events
+
+def _resolve_video_source(source: str) -> Path:
+    if not source:
+        raise ValueError("Video source is required")
+    if source.startswith("http://") or source.startswith("https://"):
+        path_part = source.split("/uploads/", 1)[-1] if "/uploads/" in source else source
+        candidate = UPLOAD_DIR / Path(path_part).name
+    else:
+        raw = Path(source)
+        candidate = raw if raw.is_absolute() else (BASE_DIR / raw)
+    candidate = candidate.resolve()
+    allowed_roots = [UPLOAD_DIR.resolve(), RESULTS_DIR.resolve(), BASE_DIR.resolve()]
+    if not any(root == candidate or root in candidate.parents for root in allowed_roots):
+        raise ValueError("Video source is outside allowed workspace paths")
+    if candidate.suffix.lower() not in ALLOWED_VIDEO_EXTENSIONS:
+        raise ValueError("Unsupported video source")
+    if not candidate.exists():
+        raise FileNotFoundError(str(candidate))
+    return candidate
+
 @app.get("/grounding/status")
 async def get_grounding_status():
     return grounding_status()
@@ -174,34 +311,38 @@ async def ground_image(
         "points": points,
     }
 
-    annotations_dir = RESULTS_DIR / "annotations"
-    annotations_dir.mkdir(exist_ok=True)
-    annotation_path = annotations_dir / f"grounding_{image_path.stem}_{uuid.uuid4().hex[:8]}.json"
+    for idx, box in enumerate(boxes):
+        box["id"] = f"box_{idx}"
+        box["review_status"] = "pending"
+        box["source"] = "grounding"
+
+    annotation_path = ANNOTATIONS_DIR / f"grounding_{image_path.stem}_{uuid.uuid4().hex[:8]}.json"
     annotation["annotation_file"] = annotation_path.name
     annotation["annotation_url"] = str(request.url_for("results", path=f"annotations/{annotation_path.name}"))
     annotation_path.write_text(json.dumps(annotation, indent=2), encoding="utf-8")
     return annotation
 
 @app.post("/grounding/export-yolo/{annotation_file}")
-async def export_grounding_yolo(annotation_file: str, class_id: int = 0):
-    annotations_dir = RESULTS_DIR / "annotations"
-    labels_dir = RESULTS_DIR / "labels"
+async def export_grounding_yolo(annotation_file: str, class_id: int = 0, accepted_only: bool = False):
     try:
-        annotation_path = _safe_result_child(annotations_dir, annotation_file, {".json"})
+        annotation_path = _safe_result_child(ANNOTATIONS_DIR, annotation_file, {".json"})
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not annotation_path.exists():
         raise HTTPException(status_code=404, detail="Annotation file not found")
 
     annotation = json.loads(annotation_path.read_text(encoding="utf-8"))
+    boxes = annotation.get("boxes", [])
+    if accepted_only:
+        boxes = [box for box in boxes if box.get("review_status") == "accepted"]
     labels = boxes_to_yolo_labels(
-        annotation.get("boxes", []),
+        boxes,
         image_width=int(annotation["width"]),
         image_height=int(annotation["height"]),
         class_id=class_id,
     )
-    labels_dir.mkdir(exist_ok=True)
-    label_path = labels_dir / f"{annotation_path.stem}.txt"
+    LABELS_DIR.mkdir(exist_ok=True)
+    label_path = LABELS_DIR / f"{annotation_path.stem}.txt"
     label_path.write_text("\n".join(labels) + ("\n" if labels else ""), encoding="utf-8")
     return {
         "status": "success",
@@ -209,6 +350,132 @@ async def export_grounding_yolo(annotation_file: str, class_id: int = 0):
         "label_file": label_path.name,
         "labels": len(labels),
     }
+
+@app.post("/grounding/annotation/{annotation_file}/boxes/{box_id}/review")
+async def review_annotation_box(annotation_file: str, box_id: str, data: dict):
+    status = data.get("review_status", "pending")
+    if status not in REVIEW_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Unsupported review status: {status}")
+    try:
+        annotation_path = _safe_result_child(ANNOTATIONS_DIR, annotation_file, {".json"})
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not annotation_path.exists():
+        raise HTTPException(status_code=404, detail="Annotation file not found")
+
+    annotation = json.loads(annotation_path.read_text(encoding="utf-8"))
+    for box in annotation.get("boxes", []):
+        if box.get("id") == box_id:
+            box["review_status"] = status
+            if "label" in data:
+                box["label"] = data["label"]
+            if "review_note" in data:
+                box["review_note"] = data["review_note"]
+            annotation_path.write_text(json.dumps(annotation, indent=2), encoding="utf-8")
+
+            review_state = _load_review_state()
+            review_state.setdefault("annotations", {})[f"{annotation_path.name}:{box_id}"] = {
+                "review_status": status,
+                "label": box.get("label"),
+                "review_note": box.get("review_note", ""),
+            }
+            _save_review_state(review_state)
+            return {"status": "success", "box": box}
+    raise HTTPException(status_code=404, detail="Annotation box not found")
+
+@app.get("/review/events")
+async def list_review_events(result_file: str = None):
+    review_state = _load_review_state()
+    overrides = review_state.get("events", {})
+    events = []
+    if GAME_STATE:
+        with GAME_STATE._lock:
+            events.extend(_event_to_review_dict(event, overrides.get(event.event_id)) for event in GAME_STATE.events)
+    if result_file:
+        try:
+            offline = _offline_events_from_result(result_file)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        for event in offline:
+            event.update(overrides.get(event["id"], {}))
+        events.extend(offline)
+    return {"events": events, "count": len(events)}
+
+@app.post("/review/events/{event_id}")
+async def update_review_event(event_id: str, data: dict):
+    status = data.get("review_status", "pending")
+    if status not in REVIEW_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Unsupported review status: {status}")
+
+    review_state = _load_review_state()
+    review_state.setdefault("events", {})[event_id] = {
+        "review_status": status,
+        "review_note": data.get("review_note", ""),
+    }
+    if GAME_STATE:
+        with GAME_STATE._lock:
+            for event in GAME_STATE.events:
+                if event.event_id == event_id:
+                    event.review_status = status
+                    break
+    _save_review_state(review_state)
+    return {"status": "success", "event_id": event_id, "review_status": status}
+
+@app.post("/video/extract-frame")
+async def extract_frame(request: Request, data: dict):
+    try:
+        video_path = _resolve_video_source(data.get("video_url") or data.get("video_path") or data.get("source"))
+        timestamp = float(data.get("timestamp", 0))
+        frame_index = data.get("frame")
+        import cv2
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            raise ValueError("Could not open video source")
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        if frame_index is None:
+            frame_index = max(0, int(timestamp * fps))
+        else:
+            frame_index = max(0, int(frame_index))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        ok, frame = cap.read()
+        cap.release()
+        if not ok:
+            raise ValueError("Could not read requested frame")
+        output_path = FRAMES_DIR / f"frame_{video_path.stem}_{frame_index}_{uuid.uuid4().hex[:8]}.jpg"
+        cv2.imwrite(str(output_path), frame)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "status": "success",
+        "frame": frame_index,
+        "timestamp": timestamp,
+        "image": output_path.name,
+        "image_url": str(request.url_for("results", path=f"frames/{output_path.name}")),
+    }
+
+@app.get("/calibration")
+async def get_calibration():
+    return _load_calibration()
+
+@app.post("/calibration")
+async def save_calibration(data: dict):
+    video_points = data.get("video")
+    real_points = data.get("real")
+    if not isinstance(video_points, list) or not isinstance(real_points, list):
+        raise HTTPException(status_code=400, detail="Calibration requires video and real point lists")
+    if len(video_points) < 4 or len(real_points) < 4 or len(video_points) != len(real_points):
+        raise HTTPException(status_code=400, detail="Calibration requires at least four matching points")
+    calibration = {"video": video_points, "real": real_points}
+    _write_json_file(CALIBRATION_FILE, calibration)
+    return {"status": "success", "calibration": calibration}
+
+@app.get("/quality")
+async def quality():
+    return _quality_summary()
 
 def _mark_job_failed(job_id: str, exc: Exception):
     JOBS[job_id]["progress"] = 100
@@ -254,10 +521,7 @@ async def analyze_file(background_tasks: BackgroundTasks, file: UploadFile = Fil
     job_id = str(uuid.uuid4())
     JOBS[job_id] = {"progress": 0, "status": "Uploading...", "result_file": None, "error": None}
     output_name = str(RESULTS_DIR / f"stats_{file_path.stem}_{job_id[:8]}")
-    calibration = {
-        "video": [[100, 100], [1100, 100], [100, 900], [1100, 900]],
-        "real": [[0, 0], [28, 0], [0, 15], [28, 15]]
-    }
+    calibration = _load_calibration()
     background_tasks.add_task(run_background_analysis, job_id, str(file_path), output_name, calibration)
     return {"status": "success", "job_id": job_id}
 

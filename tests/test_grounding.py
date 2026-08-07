@@ -45,6 +45,16 @@ def test_boxes_to_yolo_labels():
     assert rows == ["2 0.200000 0.300000 0.200000 0.400000"]
 
 
+def test_boxes_to_yolo_labels_can_filter_by_review_status():
+    boxes = [
+        {"x1": 0, "y1": 0, "x2": 100, "y2": 100, "review_status": "accepted"},
+        {"x1": 100, "y1": 100, "x2": 200, "y2": 200, "review_status": "rejected"},
+    ]
+    accepted = [box for box in boxes if box["review_status"] == "accepted"]
+
+    assert boxes_to_yolo_labels(accepted, 200, 200) == ["0 0.250000 0.250000 0.500000 0.500000"]
+
+
 def test_grounding_status_defaults_to_disabled(monkeypatch):
     monkeypatch.delenv("HOOP_STATS_GROUNDING_BACKEND", raising=False)
     from hoop_stats.grounding import grounding_status

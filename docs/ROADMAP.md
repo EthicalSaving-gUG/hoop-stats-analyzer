@@ -20,17 +20,21 @@ Produkt- und Forschungsaufgaben. Statuswerte:
 | Frontend API-Konfiguration | `VITE_API_BASE_URL` ersetzt hart codierte API-URL. |
 | Agenten-Dokumentation | `docs/AGENT_GUIDE.md` beschreibt Architektur und Arbeitsvertraege. |
 | GameState-Konsolidierung | Doppelte `player_fouls`-Initialisierung entfernt. |
+| Review-Queue fuer AI-Events | Live- und Offline-Events koennen bestaetigt, verworfen und markiert werden. |
+| Frame-Extraktion | Videos koennen serverseitig zu Bildframes fuer Grounding extrahiert werden. |
+| Annotation Review Status | Grounding-Boxen speichern `accepted`, `rejected`, `pending` oder `needs_review`. |
+| Datenqualitaets-Dashboard | UI und API zeigen Kamera-, Job-, Warn- und Review-Status. |
+| Konfigurierbare Court Calibration | Court-Punkte koennen ueber API/UI gespeichert und von Analysen genutzt werden. |
+| Agent Confidence Contract | Events enthalten Confidence, Evidence, Review-Status und Kameraquelle. |
 
 ## Next
 
 | Prioritaet | Thema | Akzeptanzkriterium |
 | --- | --- | --- |
-| P0 | Review-Queue fuer AI-Events | Live-/Offline-Events koennen bestaetigt, verworfen und exportiert werden. |
-| P0 | Frame-Extraktion im UI | Nutzer kann aus Videoanalyse/Manual-Review einzelne Frames fuer Grounding speichern. |
-| P0 | Annotation Review Status | Akzeptierte/verworfene Grounding-Boxen werden einzeln gespeichert. |
-| P1 | Datenqualitaets-Dashboard | Zeigt FPS, Aufloesung, Kameraabdeckung, Detektionsrate und Warnungen. |
-| P1 | Konfigurierbare Court Calibration | UI fuer echte Court-Punkte statt Default-Kalibrierung. |
-| P1 | Agent Confidence Contract | Jedes Event enthaelt Confidence, Evidence und Review-Status. |
+| P0 | Review-Queue UX verfeinern | Bulk-Aktionen, Filter und Export der bestaetigten Events. |
+| P0 | Visuelle Calibration | Court-Punkte direkt auf einem Frame anklicken statt JSON manuell einzugeben. |
+| P1 | Annotation Editor | Grounding-Boxen ziehen/resizen statt nur Status setzen. |
+| P1 | Datenqualitaets-Metriken erweitern | Detektionsrate, OCR-Rate und Frame-Drop-Rate pro Quelle messen. |
 
 ## Planned
 

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, FastForward, Maximize, Settings } from 'lucide-react';
+import { Camera, Play, Pause, SkipBack, SkipForward, FastForward, Maximize } from 'lucide-react';
 
-const VideoPlayer = ({ videoUrl }) => {
+const VideoPlayer = ({ videoUrl, onCaptureFrame }) => {
     const videoRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -105,6 +105,14 @@ const VideoPlayer = ({ videoUrl }) => {
         }
     };
 
+    const captureFrame = () => {
+        if (!videoRef.current || !onCaptureFrame) return;
+        onCaptureFrame({
+            videoUrl,
+            timestamp: videoRef.current.currentTime || 0,
+        });
+    };
+
     return (
         <div className="relative group w-full bg-slate-900 rounded-xl overflow-hidden border border-slate-700/50 flex flex-col h-full">
             <div className="relative flex-grow bg-black flex items-center justify-center">
@@ -165,6 +173,11 @@ const VideoPlayer = ({ videoUrl }) => {
                     </div>
 
                     <div className="flex items-center gap-4 relative">
+                        {onCaptureFrame && (
+                            <button onClick={captureFrame} disabled={!videoUrl} className="text-slate-300 hover:text-white transition disabled:opacity-50" title="Frame fuer Grounding extrahieren">
+                                <Camera className="w-5 h-5" />
+                            </button>
+                        )}
                         <div className="relative">
                             <button 
                                 onClick={() => setShowSettings(!showSettings)} 

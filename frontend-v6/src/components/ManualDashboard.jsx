@@ -24,6 +24,7 @@ const ManualDashboard = ({ onExit }) => {
     const [activeTab, setActiveTab] = useState('home');
     const [expandedPlayer, setExpandedPlayer] = useState(null);
     const [actionHistory, setActionHistory] = useState([]);
+    const [frameMessage, setFrameMessage] = useState('');
 
     useEffect(() => {
         fetchState();
@@ -106,6 +107,19 @@ const ManualDashboard = ({ onExit }) => {
         }
     };
 
+    const handleCaptureFrame = async ({ videoUrl, timestamp }) => {
+        setFrameMessage('');
+        try {
+            const res = await axios.post(`${API_BASE}/video/extract-frame`, {
+                video_url: videoUrl,
+                timestamp,
+            });
+            setFrameMessage(`Frame ${res.data.frame} extrahiert: ${res.data.image}`);
+        } catch (err) {
+            setFrameMessage(err.response?.data?.detail || 'Frame konnte nicht extrahiert werden.');
+        }
+    };
+
     if (!state) return <div className="text-center p-20 animate-pulse text-xl">Lade Dashboard...</div>;
 
     const teamHomePoints = state.players.filter(p => p.team === 'home').reduce((acc, p) => acc + (p.points_2pt * 2) + (p.points_3pt * 3) + p.points_ft, 0);
@@ -136,8 +150,13 @@ const ManualDashboard = ({ onExit }) => {
                 </div>
                 
                 <div className="flex-grow min-h-[300px]">
-                    <VideoPlayer videoUrl={state.video_url} />
+                    <VideoPlayer videoUrl={state.video_url} onCaptureFrame={handleCaptureFrame} />
                 </div>
+                {frameMessage && (
+                    <div className="glass px-4 py-2 text-sm text-slate-300">
+                        {frameMessage}
+                    </div>
+                )}
             </div>
 
             {/* Right Side: Stats Dashboard (40%) */}
