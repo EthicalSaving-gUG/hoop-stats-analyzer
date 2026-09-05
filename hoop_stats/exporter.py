@@ -78,3 +78,38 @@ class DataExporter:
                 for shot in data["shots"]:
                     writer.writerow([shot["shooter_id"], shot["status"], shot["zone"], shot["start_frame"]])
         print(f"CSV saved  → {path}")
+
+    def export_advanced_analytics(self, data):
+        """
+        Exports advanced basketball analytics including shooting splits, efficiency,
+        and possession ratings.
+        """
+        from .metrics import calculate_shooting_splits, calculate_team_ratings
+
+        shots = data.get("shots", [])
+        shooting_splits = calculate_shooting_splits(shots)
+
+        scoring = data.get("scoring", {})
+        home_score = scoring.get("home", 0)
+        away_score = scoring.get("away", 0)
+        possessions = data.get("possessions", max(1, (home_score + away_score) // 2))
+
+        home_ratings = calculate_team_ratings(home_score, away_score, possessions)
+        away_ratings = calculate_team_ratings(away_score, home_score, possessions)
+
+        analytics_payload = {
+            "shooting_splits": shooting_splits,
+            "team_ratings": {
+                "home": home_ratings,
+                "away": away_ratings,
+            },
+            "players": data.get("players", {}),
+            "scoring": scoring,
+        }
+
+        json_path = f"{self.output_base_path}_analytics.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(analytics_payload, f, indent=4)
+        print(f"Analytics JSON saved → {json_path}")
+        return analytics_payload
+

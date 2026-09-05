@@ -125,14 +125,57 @@ class _TemplateBackedTracker:
         confidence = 1.0 - min(1.0, abs(patch_mean - target_mean) / 255.0)
         return loc, confidence
 
+@dataclass
+class _KalmanFilter2D:
+    """Lightweight 2D Constant Velocity Kalman Filter for tracking bounding box center & size."""
+    mean: np.ndarray  # [x, y, w, h, vx, vy]
+    covariance: np.ndarray
+
+    @classmethod
+    def create(cls, bbox_xywh: Tuple[float, float, float, float]):
+        x, y, w, h = bbox_xywh
+        mean = np.array([x, y, w, h, 0.0, 0.0], dtype=np.float32)
+        covariance = np.diag([10.0, 10.0, 10.0, 10.0, 100.0, 100.0]).astype(np.float32)
+        return cls(mean, covariance)
+
+    def predict(self) -> Tuple[float, float, float, float]:
+        # State transition: x' = x + vx, y' = y + vy
+        F = np.eye(6, dtype=np.float32)
+        F[0, 4] = 1.0
+        F[1, 5] = 1.0
+
+        Q = np.diag([1.0, 1.0, 1.0, 1.0, 2.0, 2.0]).astype(np.float32)
+
+        self.mean = F @ self.mean
+        self.covariance = F @ self.covariance @ F.T + Q
+
+        return float(self.mean[0]), float(self.mean[1]), float(self.mean[2]), float(self.mean[3])
+
+    def update(self, bbox_xywh: Tuple[float, float, float, float]):
+        x, y, w, h = bbox_xywh
+        z = np.array([x, y, w, h], dtype=np.float32)
+
+        H = np.eye(4, 6, dtype=np.float32)
+        R = np.diag([5.0, 5.0, 5.0, 5.0]).astype(np.float32)
+
+        y_res = z - (H @ self.mean)
+        S = H @ self.covariance @ H.T + R
+        K = self.covariance @ H.T @ np.linalg.inv(S)
+
+        self.mean = self.mean + K @ y_res
+        self.covariance = (np.eye(6, dtype=np.float32) - K @ H) @ self.covariance
+
+
 class MultiRoiTracker:
     def __init__(self):
         # {obj_id: tracker wrapper}
         self.trackers = {}
+        # {obj_id: _KalmanFilter2D}
+        self.kalman_filters = {}
         
     def add_tracker(self, frame, bbox_xyxy: List[float], obj_id: int):
         """
-        Initializes a CSRT tracker for a given bounding box.
+        Initializes a CSRT tracker and Kalman Filter for a given bounding box.
         bbox_xyxy: [x1, y1, x2, y2]
         """
         x1, y1, x2, y2 = map(int, bbox_xyxy)
@@ -146,20 +189,29 @@ class MultiRoiTracker:
         bbox_xywh = (x1, y1, w, h)
         
         self.trackers[obj_id] = _TemplateBackedTracker.create(frame, bbox_xywh)
+        self.kalman_filters[obj_id] = _KalmanFilter2D.create((float(x1), float(y1), float(w), float(h)))
         return True
 
     def update(self, frame) -> Dict[int, List[float]]:
         """
-        Updates all tracked objects with the new frame.
+        Updates all tracked objects with the new frame, leveraging Kalman prediction
+        and IoU association for ByteTrack style resilience.
         Returns a dict of successful updates: {obj_id: [x1, y1, x2, y2]}
         """
         updated_bboxes = {}
         lost_ids = []
         
         for obj_id, tracker in self.trackers.items():
+            # Step 1: Predict with Kalman Filter
+            kf = self.kalman_filters.get(obj_id)
+            if kf is not None:
+                kf.predict()
+
             success, bbox_xywh = tracker.update(frame)
             if success:
                 x, y, w, h = bbox_xywh
+                if kf is not None:
+                    kf.update((float(x), float(y), float(w), float(h)))
                 updated_bboxes[obj_id] = [x, y, x + w, y + h]
             else:
                 lost_ids.append(obj_id)
@@ -173,10 +225,13 @@ class MultiRoiTracker:
     def remove_tracker(self, obj_id: int):
         if obj_id in self.trackers:
             del self.trackers[obj_id]
+        if obj_id in self.kalman_filters:
+            del self.kalman_filters[obj_id]
 
     def clear(self):
         """Remove all trackers (e.g., before refreshing from YOLO)."""
         self.trackers.clear()
+        self.kalman_filters.clear()
         
     @property
     def active_count(self) -> int:

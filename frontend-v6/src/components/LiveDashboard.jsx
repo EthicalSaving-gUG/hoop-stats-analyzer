@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Timer, Clock, Users, Trophy, Mic, MicOff, Video, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import ShotChart from './ShotChart';
+import Court3DCanvas from './Court3DCanvas';
 import { API_BASE } from '../config';
 
 const BiometricsCanvas = ({ poseModel, mesh, skeleton }) => {
@@ -567,6 +568,19 @@ const LiveDashboard = ({ onStop }) => {
                     </div>
                 </div>
             )}
+
+            {/* 🏀 3D WebGL Court Visualization */}
+            <div className="glass p-5 border-l-4 border-orange-500 space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-md font-bold text-slate-200 flex items-center gap-2">
+                        🏀 Live 3D-Spielfeld (Three.js WebGL Court & Ball Trajectories)
+                    </h3>
+                    <span className="text-xs text-orange-400 font-mono bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                        Echtzeit 3D-Tracking
+                    </span>
+                </div>
+                <Court3DCanvas courtTracking={state.court_tracking} shots={liveShots} />
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Event Feed */}

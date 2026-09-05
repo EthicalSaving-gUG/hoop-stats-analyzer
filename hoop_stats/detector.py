@@ -50,18 +50,31 @@ class HoopDetector:
 
         # ── Hardware Auto-Detection & Optimization ────────────────────
         
-        # 1. Check for NVIDIA CUDA
+        # 1. Check for NVIDIA CUDA & ONNX Runtime CUDA Acceleration
         if torch.cuda.is_available():
             self.device_name = f"GPU (CUDA: {torch.cuda.get_device_name(0)})"
-            self.model = base_model
-            # PyTorch runs fine natively on CUDA, no export needed
+            try:
+                import onnxruntime as ort
+                if 'CUDAExecutionProvider' in ort.get_available_providers():
+                    onnx_path = model_variant.replace('.pt', '.onnx')
+                    if os.path.exists(onnx_path):
+                        optimized_model_path = onnx_path
+                        self.device_name += " [ONNX CUDA Accelerated]"
+            except ImportError:
+                pass
+            self.model = YOLO(optimized_model_path if optimized_model_path != model_variant else base_model)
             
-        # 2. Check for Windows DirectML (AMD/Intel GPUs)
+        # 2. Check for Windows DirectML / OpenVINO ONNX Execution Providers
         else:
             try:
                 import onnxruntime as ort
                 providers = ort.get_available_providers()
-                if 'DmlExecutionProvider' in providers:
+                if 'CUDAExecutionProvider' in providers:
+                    self.device_name = "GPU (ONNX CUDA)"
+                    onnx_path = model_variant.replace('.pt', '.onnx')
+                    if os.path.exists(onnx_path):
+                        optimized_model_path = onnx_path
+                elif 'DmlExecutionProvider' in providers:
                     # AMD/Intel integrated GPU via DirectML
                     self.device_name = "GPU (DirectML / AMD)"
                     onnx_path = model_variant.replace('.pt', '.onnx')
@@ -73,6 +86,11 @@ class HoopDetector:
                         optimized_model_path = onnx_path
                     else:
                         self.device_name = "CPU"
+                elif 'OpenVINOExecutionProvider' in providers:
+                    self.device_name = "CPU (ONNX OpenVINO)"
+                    onnx_path = model_variant.replace('.pt', '.onnx')
+                    if os.path.exists(onnx_path):
+                        optimized_model_path = onnx_path
             except ImportError:
                 pass
 

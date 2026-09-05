@@ -47,7 +47,7 @@ class CourtGeometry:
 
     def set_homography(self, video_points, real_world_points):
         """
-        Calculates the homography matrix.
+        Calculates the homography matrix and its inverse.
         :param video_points: List of (x, y) pixels from video.
         :param real_world_points: List of (x, y) meters on court.
         """
@@ -55,6 +55,13 @@ class CourtGeometry:
         real_world_points = np.array(real_world_points, dtype=np.float32)
         
         self.homography_matrix, _ = cv2.findHomography(video_points, real_world_points)
+        if self.homography_matrix is not None:
+            try:
+                self.inv_homography_matrix = np.linalg.inv(self.homography_matrix)
+            except np.linalg.LinAlgError:
+                self.inv_homography_matrix = None
+        else:
+            self.inv_homography_matrix = None
 
     def pixel_to_meter(self, x, y):
         """
@@ -66,6 +73,23 @@ class CourtGeometry:
         point = np.array([[[x, y]]], dtype=np.float32)
         transformed_point = cv2.perspectiveTransform(point, self.homography_matrix)
         return transformed_point[0][0][0], transformed_point[0][0][1]
+
+    def meter_to_pixel(self, mx, my):
+        """
+        Transforms real-world court coordinate (Mx, My) back to camera pixel (x, y).
+        """
+        if self.inv_homography_matrix is None:
+            if self.homography_matrix is not None:
+                try:
+                    self.inv_homography_matrix = np.linalg.inv(self.homography_matrix)
+                except np.linalg.LinAlgError:
+                    return mx, my
+            else:
+                return mx, my
+                
+        point = np.array([[[mx, my]]], dtype=np.float32)
+        transformed_point = cv2.perspectiveTransform(point, self.inv_homography_matrix)
+        return float(transformed_point[0][0][0]), float(transformed_point[0][0][1])
 
     def get_distance(self, p1, p2):
         """

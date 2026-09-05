@@ -672,6 +672,15 @@ async def get_game_state():
         snapshot["cameras"] = {}
     return snapshot
 
+@app.get("/game/analytics")
+async def get_game_analytics():
+    """
+    Computes real-time advanced basketball analytics:
+    eFG%, TS%, expected points (xPTS), PAOE, and Team Ratings (ORtg/DRtg/Pace).
+    """
+    from hoop_stats.metrics import get_game_analytics_payload
+    return get_game_analytics_payload(GAME_STATE)
+
 @app.post("/game/stop")
 async def stop_game():
     global GAME_STATE, STREAM_MGR, AGENTS
