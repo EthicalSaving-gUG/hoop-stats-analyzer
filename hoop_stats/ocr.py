@@ -10,21 +10,31 @@ class JerseyOCR:
     def identify_number(self, crop):
         """
         Processes a crop of a player and attempts to find a number.
+        Uses adaptive bicubic upscaling and CLAHE equalization for high recall on distant game video.
         """
         if crop is None or crop.size == 0:
             return None
-            
-        # Optional: Preprocessing for better OCR
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
-        # Increase contrast
-        gray = cv2.convertScaleAbs(gray, alpha=1.5, beta=0)
-        
+
+        # Convert to grayscale
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if len(crop.shape) == 3 else crop
+
+        # Ensure minimum resolution for EasyOCR CRAFT text detector
+        h, w = gray.shape[:2]
+        if h < 64 or w < 64:
+            scale = max(64.0 / max(1, h), 64.0 / max(1, w), 2.5)
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            gray = cv2.resize(gray, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+
+        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        gray = clahe.apply(gray)
+
         results = self.reader.readtext(gray, allowlist='0123456789')
-        
         if not results:
             return None
-            
+
         # Return the result with the highest confidence
         # results is a list of [bbox, text, confidence]
         results.sort(key=lambda x: x[2], reverse=True)
-        return results[0][1]
+        return str(results[0][1])
