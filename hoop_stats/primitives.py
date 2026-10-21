@@ -110,8 +110,18 @@ class PlayerCapsule:
 
     @property
     def ground_contact(self) -> Point2D:
-        """The foot point — used for court-coordinate transforms."""
+        """The central foot point — used for court-coordinate transforms."""
         return self.foot
+
+    @property
+    def foot_left(self) -> Point2D:
+        """Estimated left foot ground contact point (~quarter width left of center)."""
+        return Point2D(self.foot.x - self.width * 0.25, self.foot.y)
+
+    @property
+    def foot_right(self) -> Point2D:
+        """Estimated right foot ground contact point (~quarter width right of center)."""
+        return Point2D(self.foot.x + self.width * 0.25, self.foot.y)
 
     @property
     def pixel_x(self) -> float:

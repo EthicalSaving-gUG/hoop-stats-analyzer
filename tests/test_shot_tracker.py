@@ -202,3 +202,37 @@ class TestHalftimeSwap:
         assert "away_pts" in totals
         assert "sides_swapped" in totals
         assert totals["sides_swapped"] is False
+
+    def test_takeoff_floor_contact_determines_three_vs_two_pointer(self):
+        """FIBA Art. 16.2.3: Shot value is determined by shooter's takeoff floor contact."""
+        from hoop_stats.geometry import CourtGeometry
+        geo = CourtGeometry(config_path="non_existent.json")
+        # Calibrate homography from 1280x720 video space to FIBA 28.0m x 15.0m court space
+        video_pts = [(0, 0), (1280, 0), (1280, 720), (0, 720)]
+        court_pts = [(0.0, 0.0), (28.0, 0.0), (28.0, 15.0), (0.0, 15.0)]
+        geo.set_homography(video_pts, court_pts)
+
+        detector = ShotTracker(frame_w=1280, frame_h=720, court_geometry=geo)
+
+        # 1. Shooter 1 takes off from behind 3pt line:
+        # Court meter (19.0m, 7.5m) -> pixel (19.0/28*1280 ≈ 868.57, 7.5/15*720 = 360.0)
+        px, py = 868.57, 360.0
+        p_three = _make_capsule(px=px, py=py, mx=19.0, my=7.5, obj_id=1, width=30)
+        capsules_3 = {1: p_three}
+
+        # Upward ball movement simulating 3pt shot release near shooter
+        for i in range(5):
+            b = _make_ball(x=px - i*10, y=py - 20 - i*20)
+            detector.update([b], capsules_3, frame_idx=i)
+
+        assert len(detector.active_shots) == 1
+        active_shot = detector.active_shots[0]
+        assert "three" in active_shot["zone"].lower()
+
+        # Score the 3pt shot into right rim
+        rim = detector.rims[1]
+        evts = detector.update([_make_ball(rim.center.x, rim.center.y)], capsules_3, frame_idx=10)
+        assert len(evts) == 1
+        assert evts[0]["points"] == 3
+        assert evts[0]["type"] == "SHOT_MAKE"
+

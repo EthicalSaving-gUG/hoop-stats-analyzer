@@ -37,6 +37,8 @@ OFFICIAL_GROUND_TRUTH_UFFENHEIM = {
         "reb": 45,
         "assists": 7,
         "turnovers": 20,
+        "turnovers_traveling": 6,
+        "turnovers_bad_pass": 11,
         "steals": 6,
         "blocks": 3,
         "fouls_drawn": 18,
@@ -146,15 +148,25 @@ class BenchmarkEvaluator:
         comparison = {}
 
         metrics_to_check = [
-            ("points", "Points"),
+            ("points", "Points (Punkte gesamt)"),
             ("fgm", "FGM (Field Goals Made)"),
             ("fga", "FGA (Field Goals Attempted)"),
-            ("fg2m", "2PM (2-Pointers Made)"),
-            ("fg2a", "2PA (2-Pointers Attempted)"),
-            ("fg3m", "3PM (3-Pointers Made)"),
-            ("fg3a", "3PA (3-Pointers Attempted)"),
-            ("efg_pct", "eFG% (Effective FG%)"),
-            ("ts_pct", "TS% (True Shooting%)"),
+            ("fg2m", "2PM (2-Punkte Treffer)"),
+            ("fg2a", "2PA (2-Punkte Versuche)"),
+            ("fg3m", "3PM (3-Punkte Treffer)"),
+            ("fg3a", "3PA (3-Punkte Versuche)"),
+            ("ftm", "FTM (Freiwürfe Treffer)"),
+            ("fta", "FTA (Freiwürfe Versuche)"),
+            ("reb", "REB (Rebounds gesamt)"),
+            ("oreb", "OREB (Offensiv-Rebounds)"),
+            ("dreb", "DREB (Defensiv-Rebounds)"),
+            ("assists", "AST (Assists)"),
+            ("turnovers", "TO (Turnovers / Ballverluste)"),
+            ("turnovers_traveling", "  ↳ davon Schrittfehler"),
+            ("turnovers_bad_pass", "  ↳ davon Fehlpässe"),
+            ("steals", "STL (Steals / Ballgewinne)"),
+            ("blocks", "BLK (Blocks)"),
+            ("fouls_drawn", "FD (Gezogene Fouls)"),
         ]
 
         for key, label in metrics_to_check:
@@ -163,6 +175,7 @@ class BenchmarkEvaluator:
             delta = det_val - gt_val
             pct_error = (abs(delta) / gt_val * 100.0) if gt_val > 0 else 0.0
             accuracy = max(0.0, 100.0 - pct_error)
+            capture_rate = (det_val / gt_val * 100.0) if gt_val > 0 else 0.0
 
             comparison[key] = {
                 "label": label,
@@ -170,6 +183,7 @@ class BenchmarkEvaluator:
                 "detected": det_val,
                 "delta": round(delta, 3),
                 "accuracy_pct": round(accuracy, 1),
+                "capture_rate_pct": round(capture_rate, 1),
             }
 
         return comparison

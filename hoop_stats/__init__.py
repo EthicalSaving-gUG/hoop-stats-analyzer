@@ -7,6 +7,8 @@ from .exporter import DataExporter
 from .team_colors import get_dominant_jersey_color, assign_teams_by_color
 from .shot_tracker import ShotTracker
 from .rim_detector import RimDetector
+from .player_registry import PlayerRegistry, PlayerStatSheet
+from .event_detector import EventDetector
 from .primitives import (
     Point2D, Ball, Rim, Backboard, PlayerCapsule, CourtLine,
     bbox_to_ball, bbox_to_player, bbox_to_rim, bbox_to_backboard,

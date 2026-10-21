@@ -12,8 +12,15 @@ class JerseyOCR:
         Processes a crop of a player and attempts to find a number.
         Uses adaptive bicubic upscaling and CLAHE equalization for high recall on distant game video.
         """
+        num, _ = self.identify_number_with_conf(crop)
+        return num
+
+    def identify_number_with_conf(self, crop):
+        """
+        Processes player crop and returns (number_str, confidence_float) or (None, 0.0).
+        """
         if crop is None or crop.size == 0:
-            return None
+            return None, 0.0
 
         # Convert to grayscale
         gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if len(crop.shape) == 3 else crop
@@ -32,9 +39,9 @@ class JerseyOCR:
 
         results = self.reader.readtext(gray, allowlist='0123456789')
         if not results:
-            return None
+            return None, 0.0
 
         # Return the result with the highest confidence
         # results is a list of [bbox, text, confidence]
         results.sort(key=lambda x: x[2], reverse=True)
-        return str(results[0][1])
+        return str(results[0][1]), float(results[0][2])

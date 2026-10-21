@@ -1047,6 +1047,12 @@ async def websocket_endpoint(websocket: WebSocket):
             if peer_id in active_viewers:
                 del active_viewers[peer_id]
 
+@app.get("/")
+async def get_index():
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return FileResponse("manual_stats_entry.html")
+
 @app.get("/mobile")
 async def get_mobile():
     return FileResponse("mobile.html")
@@ -1054,6 +1060,44 @@ async def get_mobile():
 @app.get("/viewer")
 async def get_viewer():
     return FileResponse("viewer.html")
+
+@app.get("/manual-stats")
+async def get_manual_stats():
+    return FileResponse("manual_stats_entry.html")
+
+@app.get("/api/manual-stats/metadata")
+async def get_manual_stats_metadata():
+    from hoop_stats.manual_stats import OFFICIAL_ROSTER_UFFENHEIM_26_27, DEFAULT_MATCHES_SCHEDULE, ACTION_CODES
+    return {
+        "roster": OFFICIAL_ROSTER_UFFENHEIM_26_27,
+        "schedule": DEFAULT_MATCHES_SCHEDULE,
+        "action_codes": ACTION_CODES
+    }
+
+@app.get("/api/videos")
+async def list_available_videos():
+    videos = []
+    if UPLOAD_DIR.exists():
+        for f in UPLOAD_DIR.glob("*"):
+            if f.suffix.lower() in ALLOWED_VIDEO_EXTENSIONS:
+                videos.append({
+                    "name": f.name,
+                    "url": f"/uploads/{f.name}",
+                    "size_mb": round(f.stat().st_size / (1024 * 1024), 1)
+                })
+    return {"videos": videos}
+
+@app.get("/api/ai-events")
+async def get_ai_events():
+    clips_manifest = RESULTS_DIR / "stat_linked_clips_manifest.json"
+    if clips_manifest.exists():
+        with open(clips_manifest, "r", encoding="utf-8") as f:
+            return json.load(f)
+    eval_file = RESULTS_DIR / "match_oerlenbach_evaluation.json"
+    if eval_file.exists():
+        with open(eval_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"clips": []}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning", access_log=False)

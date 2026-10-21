@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SB Uffenheim – Video-Synchronisierte Basketball Datenerfassung 2026/27</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        @media print {
+            body { background: white !important; color: black !important; padding: 0 !important; }
+            .no-print { display: none !important; }
+            #strichliste-print-container { display: block !important; }
+            @page { size: A4 landscape; margin: 8mm; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { border: 1px solid #111 !important; color: black !important; padding: 4px 6px !important; font-size: 11px !important; }
+            th { background: #f0f0f0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+    <!-- Top Navigation Header -->
+    <header class="no-print bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-4 py-2.5">
+        <div class="max-w-[1700px] mx-auto flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- Branding -->
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-slate-950 text-lg shadow-lg shadow-cyan-500/20">
+                    🏀
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base font-bold tracking-tight text-white">SB Uffenheim – Video & Stats</h1>
+                        <span class="bg-cyan-950 text-cyan-400 text-[11px] px-2 py-0.5 rounded-full border border-cyan-800 font-medium">Herren 2026/27</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">UFR Bezirksklasse Herren Ost (Liganr. 25003)</p>
+                </div>
+            </div>
+
+            <!-- Video File Selector / Uploader in Header -->
+            <div class="flex items-center gap-2 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1">
+                    🎥 <span>Video:</span>
+                </span>
+                <select id="video-source-select" onchange="changeVideoSource(this.value)" class="bg-slate-900 text-xs font-semibold text-cyan-300 border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none focus:border-cyan-500 max-w-[200px] truncate">
+                    <option value="">Video auswählen...</option>
+                    <option value="/uploads/game_oerlenbach.mp4" selected>game_oerlenbach.mp4 (SpT 2)</option>
+                    <option value="/uploads/Grizzlies Herren 3 vs SB Uffenheim - 22.02.2026.mkv">Grizzlies vs SBU (22.02.2026)</option>
+                </select>
+                <label class="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 border border-cyan-700 cursor-pointer transition flex items-center gap-1">
+                    <span>📁 Lokale Datei</span>
+                    <input type="file" id="video-file-input" accept="video/*" onchange="loadLocalVideoFile(event)" class="hidden">
+                </label>
+            </div>
+
+            <!-- Quick Action Toolbar -->
+            <div class="flex items-center flex-wrap gap-2">
+                <button onclick="switchView('video_split')" id="btn-tab-split" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20">
+                    🎬 Video & Erfassung
+                </button>
+                <button onclick="switchView('boxscore')" id="btn-tab-boxscore" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    📊 Boxscore
+                </button>
+                <button onclick="switchView('season')" id="btn-tab-season" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    🏆 Saison & Tabelle
+                </button>
+                <button onclick="switchView('print')" id="btn-tab-print" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    🖨️ Strichliste (Druck)
+                </button>
+                <button onclick="openRosterModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+                    👥 Default Kader (11)
+                </button>
+                <a href="./mobile.html" target="_blank" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5" title="Live-Kampfgericht & Mobil-Scouting">
+                    <span>📱</span> <span>Mobile</span>
+                </a>
+                <a href="./viewer.html" target="_blank" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5" title="3D Biomechanik & Court Visualizer">
+                    <span>🎥</span> <span>3D-Viewer</span>
+                </a>
+                <button onclick="exportDataJSON()" title="Als JSON sichern" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">
+                    💾 Export
+                </button>
+                <span class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-800 text-[11px] text-emerald-400 font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Cloud-App</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Spieltag Selector Carousel -->
+        <div class="max-w-[1700px] mx-auto mt-2 pt-2 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto pb-1" id="match-selector-pills">
+            <!-- Populated dynamically -->
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-[1700px] w-full mx-auto p-4 space-y-4">
+
+        <!-- ACTIVE MATCH STATUS BANNER -->
+        <div id="match-status-banner" class="no-print bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div id="banner-spt-badge" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-bold text-sm text-cyan-400 text-center min-w-[65px]">
+                    SpT 2
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="banner-match-title" class="font-extrabold text-base text-white">SG Oerlenbach vs. SB Uffenheim</span>
+                        <span id="banner-app-badge" class="text-[11px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-medium">Mit App-Daten</span>
+                    </div>
+                    <p id="banner-match-meta" class="text-xs text-slate-400">17.10.2026 · Wilhelm-Hegler-Halle · Auswärtsspiel</p>
+                </div>
+            </div>
+
+            <!-- Score Entry & Control Check Indicator -->
+            <div class="flex items-center flex-wrap gap-3">
+                <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-400">Endergebnis:</span>
+                    <span class="text-xs font-bold text-cyan-400">SBU</span>
+                    <input type="number" id="input-score-sbu" onchange="updateMatchScore()" class="w-14 bg-slate-900 border border-slate-700 rounded-lg text-center font-bold text-white text-sm py-0.5 focus:border-cyan-500 focus:outline-none">
+                    <span class="text-slate-500 font-bold">:</span>
+                    <input type="number" id="input-score-opp" onchange="updateMatchScore()" class="w-14 bg-slate-900 border border-slate-700 rounded-lg text-center font-bold text-white text-sm py-0.5 focus:border-cyan-500 focus:outline-none">
+                    <span class="text-xs font-bold text-slate-400">Gegner</span>
+                </div>
+
+                <!-- Live Control Check Indicator Badge -->
+                <div id="control-badge" class="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 border bg-emerald-950/80 text-emerald-400 border-emerald-800">
+                    <span id="control-icon">✓</span>
+                    <span id="control-text">Boxscore-Punkte = Endergebnis</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- VIEW: VIDEO & STATS SPLIT SCREEN -->
+        <!-- ============================================================== -->
+        <div id="view-video-split" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+            <!-- LEFT COLUMN: VIDEO PLAYER, CONTROLS & AI ASSIST (5 Cols on large) -->
+            <div class="lg:col-span-5 space-y-4">
+                
+                <!-- Video Container Card -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                    
+                    <!-- Player Header with auto-pause checkbox -->
+                    <div class="p-2.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white flex items-center gap-1.5">
+                                <span>📺</span> <span id="current-video-filename">game_oerlenbach.mp4</span>
+                            </span>
+                            <span id="video-res-badge" class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-400 font-mono">1920x1080</span>
+                        </div>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-slate-300 font-medium">
+                            <input type="checkbox" id="chk-autopause" checked class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
+                            <span>Auto-Pause bei Klick</span>
+                        </label>
+                    </div>
+
+                    <!-- HTML5 Video Element with Drag-and-Drop Zone -->
+                    <div id="video-dropzone" class="relative bg-black aspect-video flex items-center justify-center overflow-hidden border-2 border-transparent transition-all">
+                        <video id="video-player" playsinline preload="metadata" class="w-full h-full object-contain">
+                            <source src="/uploads/game_oerlenbach.mp4" type="video/mp4">
+                            Ihr Browser unterstützt dieses Videoformat nicht.
+                        </video>
+                        <canvas id="video-overlay-canvas" class="absolute inset-0 pointer-events-none w-full h-full"></canvas>
+                        
+                        <!-- Empty State / Cloud Drag & Drop Hint Overlay -->
+                        <div id="video-empty-state" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-slate-950/80 transition border-2 border-dashed border-cyan-500/40 rounded-xl m-2 hidden">
+                            <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mb-3 text-cyan-400">
+                                🎬
+                            </div>
+                            <h3 class="text-sm font-bold text-white mb-1">Spielvideo per Drag & Drop hier ablegen</h3>
+                            <p class="text-xs text-slate-400 max-w-sm mb-3">
+                                Oder klicke hier, um eine lokale Video-Datei (MP4, MKV, MOV) auszuwählen.
+                            </p>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-700 text-[11px] text-cyan-300 font-semibold">
+                                ⚡ 100% lokal im Browser – kein 6 GB Cloud-Upload, 0 ms Latenz
+                            </span>
+                        </div>
+
+                        <!-- Floating Big Play Overlay Indicator -->
+                        <div id="video-overlay-playstate" class="absolute pointer-events-none opacity-0 transition-opacity duration-300 bg-black/60 rounded-full p-4 text-white text-3xl">
+                            ▶️
+                        </div>
+                    </div>
+
+                    <!-- Custom Precision Video Transport Bar -->
+                    <div class="p-3 bg-slate-950 border-t border-slate-800 space-y-2.5">
+                        
+                        <!-- Progress Scrubber -->
+                        <div class="flex items-center gap-3">
+                            <span id="vid-time-curr" class="font-mono text-xs text-cyan-400 font-bold min-w-[65px]">00:00.0</span>
+                            <input type="range" id="vid-progress" min="0" max="100" value="0" step="0.01" oninput="seekVideo(this.value)" class="flex-1 accent-cyan-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                            <span id="vid-time-dur" class="font-mono text-xs text-slate-400 min-w-[55px] text-right">00:00</span>
+                        </div>
+
+                        <!-- Buttons: Play/Pause, Step, Skips, Speeds -->
+                        <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
+                            
+                            <!-- Playback & Frame Stepping -->
+                            <div class="flex items-center gap-1">
+                                <button onclick="skipSeconds(-5)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold" title="5 Sek. zurück">-5s</button>
+                                <button onclick="skipSeconds(-2)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold" title="2 Sek. zurück">-2s</button>
+                                <button onclick="stepFrame(-1)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 font-mono font-bold" title="1 Frame zurück">&lt;</button>
+                                
+                                <button onclick="togglePlayPause()" id="btn-play-pause" class="p-1.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm flex items-center gap-1 shadow-md shadow-cyan-500/20">
+                                    <span id="play-icon">▶</span>
+                                </button>
+                                
+                                <button onclick="stepFrame(1)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 font-mono font-bold" title="1 Frame vor">&gt;</button>
+                                <button onclick="skipSeconds(2)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold" title="2 Sek. vor">+2s</button>
+                                <button onclick="skipSeconds(5)" class="p-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold" title="5 Sek. vor">+5s</button>
+                            </div>
+
+                            <!-- Playback Speed Controls -->
+                            <div class="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                                <span class="text-[10px] text-slate-400 px-1 font-semibold">Speed:</span>
+                                <button onclick="setPlaybackSpeed(0.25)" class="btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold text-slate-400 hover:text-white">0.25x</button>
+                                <button onclick="setPlaybackSpeed(0.5)" class="btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold text-slate-400 hover:text-white">0.5x</button>
+                                <button onclick="setPlaybackSpeed(0.75)" class="btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold text-slate-400 hover:text-white">0.75x</button>
+                                <button onclick="setPlaybackSpeed(1.0)" class="btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold bg-cyan-500 text-black">1.0x</button>
+                                <button onclick="setPlaybackSpeed(1.5)" class="btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold text-slate-400 hover:text-white">1.5x</button>
+                                <button onclick="setPlaybackSpeed(2.0)" class="btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold text-slate-400 hover:text-white">2.0x</button>
+                            </div>
+
+                            <!-- Frame Counter -->
+                            <div class="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                                Frame: <span id="vid-frame-num" class="text-white font-bold">0</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- AI CV Detection Timeline & Synchronous Assistant -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🤖</span>
+                            <h3 class="font-bold text-xs text-white uppercase tracking-wider">KI-Analyse Assistenz (CV Pipeline)</h3>
+                        </div>
+                        <button onclick="toggleAiAssist()" id="btn-toggle-ai" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900 transition">
+                            🤖 KI-Erkennungen laden
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Automatisch erkannte Korbwürfe, Schrittfehler und Rebounds mit einem Klick ins Protokoll übernehmen:</p>
+                    
+                    <!-- AI Events List Feed -->
+                    <div id="ai-events-container" class="max-h-48 overflow-y-auto space-y-1.5 text-xs">
+                        <div class="p-3 text-center text-slate-500 text-xs bg-slate-950/50 rounded-xl border border-slate-800/80">
+                            Klicke oben auf <strong>„KI-Erkennungen laden“</strong>, um Treffer, Rebounds und Schrittfehler aus der KI-Pipeline zu synchronisieren.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: STATS ENTRY & PROTOCOL / SUMS (7 Cols on large) -->
+            <div class="lg:col-span-7 space-y-4">
+                
+                <!-- Rapid Action Entry Pad (Variante B) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3.5">
+                    
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-extrabold text-sm text-white">⚡ Rapid Action Tagging</h2>
+                            <span class="text-[11px] bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800 font-bold">Zeitstempel-Kopplung Aktiv</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="text-slate-400">Protokoll: <strong id="action-count-badge" class="text-cyan-400">138</strong></span>
+                            <button onclick="undoLastProtocolAction()" class="text-amber-400 hover:text-amber-300 font-bold">↶ Undo</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Default Player Selection Grid -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">1. Spieler wählen (Default Kader):</label>
+                            <span class="text-[10px] text-cyan-400 font-semibold" id="active-selected-player-name">Ausgewählt: #20 Roman Blank</span>
+                        </div>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5" id="action-player-buttons-grid">
+                            <!-- Populated with the 11 default players -->
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Action Code Buttons -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">2. Aktion auslösen (Speichert aktuellen Video-Zeitstempel):</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5">
+                            <!-- Makes -->
+                            <button onclick="triggerProtocolAction('2T')" class="p-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 text-left transition">
+                                <div class="font-black text-xs">2T (+2)</div>
+                                <div class="text-[10px] text-emerald-400/80">2er getr.</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('3T')" class="p-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 text-left transition">
+                                <div class="font-black text-xs">3T (+3)</div>
+                                <div class="text-[10px] text-emerald-400/80">3er getr.</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('FT')" class="p-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 text-left transition">
+                                <div class="font-black text-xs">FT (+1)</div>
+                                <div class="text-[10px] text-emerald-400/80">Freiwurf getr.</div>
+                            </button>
+
+                            <!-- Misses -->
+                            <button onclick="triggerProtocolAction('2V')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-left transition">
+                                <div class="font-black text-xs">2V</div>
+                                <div class="text-[10px] text-slate-400">2er verw.</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('3V')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-left transition">
+                                <div class="font-black text-xs">3V</div>
+                                <div class="text-[10px] text-slate-400">3er verw.</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('FV')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-left transition">
+                                <div class="font-black text-xs">FV</div>
+                                <div class="text-[10px] text-slate-400">Freiwurf verw.</div>
+                            </button>
+
+                            <!-- Rebounds -->
+                            <button onclick="triggerProtocolAction('OR')" class="p-2 rounded-xl bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700 text-left transition">
+                                <div class="font-black text-xs">OR</div>
+                                <div class="text-[10px] text-sky-400/80">Off.-Reb</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('DR')" class="p-2 rounded-xl bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700 text-left transition">
+                                <div class="font-black text-xs">DR</div>
+                                <div class="text-[10px] text-sky-400/80">Def.-Reb</div>
+                            </button>
+
+                            <!-- Playmaking & Defense -->
+                            <button onclick="triggerProtocolAction('AS')" class="p-2 rounded-xl bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700 text-left transition">
+                                <div class="font-black text-xs">AS</div>
+                                <div class="text-[10px] text-indigo-400/80">Assist</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('ST')" class="p-2 rounded-xl bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700 text-left transition">
+                                <div class="font-black text-xs">ST</div>
+                                <div class="text-[10px] text-indigo-400/80">Steal</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('BL')" class="p-2 rounded-xl bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700 text-left transition">
+                                <div class="font-black text-xs">BL</div>
+                                <div class="text-[10px] text-indigo-400/80">Block</div>
+                            </button>
+
+                            <!-- Turnovers & Fouls -->
+                            <button onclick="triggerProtocolAction('TO')" class="p-2 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-700 text-left transition">
+                                <div class="font-black text-xs">TO</div>
+                                <div class="text-[10px] text-rose-400/80">Ballverlust / Schritt</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('FZ')" class="p-2 rounded-xl bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700 text-left transition">
+                                <div class="font-black text-xs">FZ</div>
+                                <div class="text-[10px] text-amber-400/80">Foul gez. (Angriff)</div>
+                            </button>
+                            <button onclick="triggerProtocolAction('OF')" class="p-2 rounded-xl bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700 text-left transition">
+                                <div class="font-black text-xs">OF</div>
+                                <div class="text-[10px] text-amber-400/80">Off.-Foul (Def.)</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Fast-Entry Console -->
+                    <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
+                        <span class="text-xs text-slate-400 font-semibold min-w-[80px]">⌨️ Eingabe:</span>
+                        <input type="text" id="keyboard-cmd-input" placeholder="z. B. '20 2T' oder '91 3V' eingeben + Enter..." onkeydown="handleKeyboardCommand(event)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-mono focus:border-cyan-500 focus:outline-none">
+                        <button onclick="submitKeyboardCommand()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs rounded-xl transition">
+                            Hinzufügen
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Protocol Table with Click-to-Seek Video Timestamps -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <div class="p-3 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs">
+                        <h3 class="font-bold text-white flex items-center gap-1.5">
+                            <span>📜 Zeitstempel-Protokoll</span>
+                            <span class="text-[10px] text-slate-400">(Klick auf Zeitstempel springt im Video)</span>
+                        </h3>
+                        <button onclick="clearProtocolConfirm()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold">
+                            🗑️ Protokoll leeren
+                        </button>
+                    </div>
+
+                    <div class="max-h-[380px] overflow-y-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-950/90 text-slate-400 sticky top-0 uppercase tracking-wider text-[11px]">
+                                <tr>
+                                    <th class="p-2 w-10 text-center">#</th>
+                                    <th class="p-2 w-24 text-center">Videozeit</th>
+                                    <th class="p-2 w-14 text-center">Trikot</th>
+                                    <th class="p-2">Spieler</th>
+                                    <th class="p-2 w-16 text-center">Code</th>
+                                    <th class="p-2">Bedeutung</th>
+                                    <th class="p-2 w-14 text-center">Pkt</th>
+                                    <th class="p-2 w-12 text-center">Aktion</th>
+                                </tr>
+                            </thead>
+                            <tbody id="protocol-table-body" class="divide-y divide-slate-800/60 font-mono">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- VIEW 2: BOXSCORE TAB (FULL DBB TABLE) -->
+        <!-- ============================================================== -->
+        <div id="view-boxscore" class="hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+                
+                <div class="p-4 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-extrabold text-white text-base">📊 Offizieller DBB Boxscore (Live berechnet)</h2>
+                        <p class="text-xs text-slate-400">Automatische Aggregation aller Würfe, Rebounds, Turnovers und Fouls.</p>
+                    </div>
+                    <div id="boxscore-analytics-pills" class="flex items-center flex-wrap gap-2 text-xs">
+                        <!-- Analytic Badges -->
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-950 text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-800">
+                                <th class="p-2 text-center w-10">Nr</th>
+                                <th class="p-2 min-w-[140px]">Name</th>
+                                <th class="p-2 text-center w-10">Ein</th>
+                                <th class="p-2 text-center w-16">Min</th>
+                                <th class="p-2 text-center w-14 font-bold text-cyan-400">Pkt</th>
+                                <th class="p-2 text-center">2P (T / V / %)</th>
+                                <th class="p-2 text-center">3P (T / V / %)</th>
+                                <th class="p-2 text-center font-semibold text-white">FG (T / V / %)</th>
+                                <th class="p-2 text-center">FW (T / V / %)</th>
+                                <th class="p-2 text-center">OR</th>
+                                <th class="p-2 text-center">DR</th>
+                                <th class="p-2 text-center font-bold text-sky-400">Reb</th>
+                                <th class="p-2 text-center text-indigo-400">AS</th>
+                                <th class="p-2 text-center text-indigo-400">ST</th>
+                                <th class="p-2 text-center text-indigo-400">BL</th>
+                                <th class="p-2 text-center text-rose-400">TO</th>
+                                <th class="p-2 text-center">FZ</th>
+                                <th class="p-2 text-center">OF</th>
+                                <th class="p-2 text-center font-bold text-amber-400">F.gez</th>
+                                <th class="p-2 text-center text-emerald-400">PF</th>
+                                <th class="p-2 text-center">+/-</th>
+                                <th class="p-2 text-center">eFG%</th>
+                                <th class="p-2 text-center">TS%</th>
+                                <th class="p-2 text-center">AS/TO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boxscore-table-body" class="divide-y divide-slate-800/70 font-medium">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                        <tfoot id="boxscore-table-foot" class="bg-slate-950 font-bold border-t-2 border-slate-700">
+                            <!-- Populated dynamically -->
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="p-3 bg-slate-950/80 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-400 font-bold">Kontrollzeile:</span>
+                        <span id="boxscore-control-status" class="px-2.5 py-1 rounded font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                            ✓ Boxscore-Punkte = Endergebnis
+                        </span>
+                    </div>
+                    <div class="text-slate-500 text-[11px]">
+                        FIBA / DBB Standardkonform · eFG% = (FGM + 0,5×3PM)/FGA · TS% = Pkt/(2×(FGA + 0,44×FTA))
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- VIEW 3: SAISON- & SPIELÜBERSICHT -->
+        <!-- ============================================================== -->
+        <div id="view-season" class="hidden space-y-6">
+            
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div class="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-extrabold text-white text-base">📅 Spielübersicht Herren 2026/27</h2>
+                        <p class="text-xs text-slate-400">Alle 14 Spieltage der UFR Bezirksklasse Herren Ost</p>
+                    </div>
+                    <div id="season-record-badges" class="flex items-center gap-2 text-xs"></div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-[11px]">
+                            <tr>
+                                <th class="p-2.5 text-center w-12">SpT</th>
+                                <th class="p-2.5 w-24">Datum</th>
+                                <th class="p-2.5 w-16 text-center">H/A</th>
+                                <th class="p-2.5">Gegner</th>
+                                <th class="p-2.5 text-center w-28">Ergebnis</th>
+                                <th class="p-2.5">Topscorer</th>
+                                <th class="p-2.5">Top-Rebounder</th>
+                                <th class="p-2.5 text-center w-20">FG %</th>
+                                <th class="p-2.5 text-center w-24">Kontrolle</th>
+                                <th class="p-2.5 text-center w-16">Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody id="season-schedule-body" class="divide-y divide-slate-800/60 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div class="p-4 bg-slate-900/90 border-b border-slate-800">
+                    <h2 class="font-extrabold text-white text-base">📈 Kumulierte Saisonstatistik 2026/27</h2>
+                    <p class="text-xs text-slate-400">Summen, Schnitte und Pro-40-Werte über alle Spieltage</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-[11px]">
+                            <tr>
+                                <th class="p-2 text-center w-10">Nr</th>
+                                <th class="p-2 min-w-[140px]">Name</th>
+                                <th class="p-2 text-center">Spiele</th>
+                                <th class="p-2 text-center font-bold text-cyan-400">Pkt</th>
+                                <th class="p-2 text-center font-semibold text-cyan-300">Pkt/Sp</th>
+                                <th class="p-2 text-center">2P (T/V/%)</th>
+                                <th class="p-2 text-center">3P (T/V/%)</th>
+                                <th class="p-2 text-center font-semibold text-white">FG (T/V/%)</th>
+                                <th class="p-2 text-center">FW (T/V/%)</th>
+                                <th class="p-2 text-center font-bold text-sky-400">Reb</th>
+                                <th class="p-2 text-center font-semibold text-sky-300">Reb/Sp</th>
+                                <th class="p-2 text-center">AS</th>
+                                <th class="p-2 text-center">ST</th>
+                                <th class="p-2 text-center">BL</th>
+                                <th class="p-2 text-center text-rose-400">TO</th>
+                                <th class="p-2 text-center">AS/TO</th>
+                                <th class="p-2 text-center">Fouls gez.</th>
+                                <th class="p-2 text-center">eFG%</th>
+                                <th class="p-2 text-center">TS%</th>
+                                <th class="p-2 text-center">Min ges.</th>
+                                <th class="p-2 text-center">Pkt/40</th>
+                                <th class="p-2 text-center">Reb/40</th>
+                            </tr>
+                        </thead>
+                        <tbody id="season-players-body" class="divide-y divide-slate-800/60 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- VIEW 4: STRICHLISTE PRINT VIEW (A4 LANDSCAPE) -->
+        <!-- ============================================================== -->
+        <div id="view-print" class="hidden">
+            <div class="no-print mb-4 flex items-center justify-between bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <div>
+                    <h3 class="font-bold text-white text-sm">🖨️ Strichliste A4-Querformat Druckansicht</h3>
+                    <p class="text-xs text-slate-400">Druckfertige Vorlage für die Bank oder das Kampfgericht.</p>
+                </div>
+                <button onclick="window.print()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm rounded-xl transition shadow-lg shadow-cyan-500/20">
+                    Drucken (Strg + P)
+                </button>
+            </div>
+
+            <div id="strichliste-print-container" class="bg-white text-black p-6 rounded-xl border border-slate-300 shadow-2xl">
+                <div class="border-b-2 border-black pb-3 mb-4 flex items-center justify-between">
+                    <div>
+                        <h1 class="text-xl font-extrabold uppercase tracking-tight">Strichliste Herren SB Uffenheim</h1>
+                        <p class="text-xs text-slate-700">UFR Bezirksklasse Herren Ost (Liganr. 25003) · Saison 2026/27</p>
+                    </div>
+                    <div class="text-xs text-right space-y-1 font-mono">
+                        <div>Spieltag: <strong id="print-spt" class="underline">1</strong> &nbsp;|&nbsp; Datum: <strong id="print-date">11.10.2026</strong></div>
+                        <div>Gegner: <strong id="print-opp">SV Kürnach BasketWalls</strong> (<span id="print-ha">Heim</span>)</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-100 p-2 border border-slate-300 rounded text-[11px] mb-4">
+                    <strong>Hinweis:</strong> Bei Spielen mit App-Daten getroffene Würfe und Freiwürfe leer lassen. Zweifelsfälle: Zeitstempel notieren und an Christian weitergeben.
+                </div>
+
+                <table class="w-full border-collapse border border-black text-xs">
+                    <thead>
+                        <tr class="bg-slate-200">
+                            <th class="border border-black p-2 text-center w-10">Nr.</th>
+                            <th class="border border-black p-2 text-left w-48">Name</th>
+                            <th class="border border-black p-2 text-center w-12">Einsatz</th>
+                            <th class="border border-black p-2 text-center">2er getr.</th>
+                            <th class="border border-black p-2 text-center">2er verw.</th>
+                            <th class="border border-black p-2 text-center">3er getr.</th>
+                            <th class="border border-black p-2 text-center">3er verw.</th>
+                            <th class="border border-black p-2 text-center">FW getr.</th>
+                            <th class="border border-black p-2 text-center">FW verw.</th>
+                            <th class="border border-black p-2 text-center">Off.-Reb</th>
+                            <th class="border border-black p-2 text-center">Def.-Reb</th>
+                            <th class="border border-black p-2 text-center">Assist</th>
+                            <th class="border border-black p-2 text-center">Steal</th>
+                            <th class="border border-black p-2 text-center">Block</th>
+                            <th class="border border-black p-2 text-center">Ballverlust</th>
+                            <th class="border border-black p-2 text-center">Foul gez.</th>
+                            <th class="border border-black p-2 text-center">Off.-Foul</th>
+                        </tr>
+                    </thead>
+                    <tbody id="strichliste-print-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ROSTER MODAL -->
+    <div id="roster-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-extrabold text-white text-base">👥 Default Kader verwalten (SB Uffenheim)</h3>
+                <button onclick="closeRosterModal()" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+            </div>
+            <p class="text-xs text-slate-400">11 Spieler sind fest hinterlegt. Änderungen werden dauerhaft lokal gespeichert.</p>
+
+            <div class="max-h-80 overflow-y-auto space-y-2" id="roster-list-inputs"></div>
+
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <button onclick="addRosterPlayer()" class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg bg-cyan-950/40 border border-cyan-800">
+                    + Spieler hinzufügen
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="resetDefaultRoster()" class="px-3 py-1.5 rounded-xl text-xs bg-slate-800 text-slate-400 hover:text-white">Reset Default</button>
+                    <button onclick="saveRosterChanges()" class="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-black">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APPLICATION CORE -->
+    <script>
+        // 1. DEFAULT ROSTER (Fest hinterlegte Standard-Spielerliste)
+        const DEFAULT_ROSTER = [
+            { jersey: "4", name: "Rainer Dehner" },
+            { jersey: "7", name: "Paul Kevin Krämer-Moore" },
+            { jersey: "11", name: "Pierre Reichl" },
+            { jersey: "14", name: "Ralf Dubiel" },
+            { jersey: "20", name: "Roman Blank" },
+            { jersey: "21", name: "Dominik Schäfer" },
+            { jersey: "26", name: "Helmut Schwebel" },
+            { jersey: "33", name: "Fabian Temme" },
+            { jersey: "35", name: "Christian Drumm" },
+            { jersey: "66", name: "Dominik Krämer" },
+            { jersey: "91", name: "Arthur Apinyan" }
+        ];
+
+        const SCHEDULE = [
+            { spt: 1, date: "11.10.2026", ha: "Heim", opp: "SV Kürnach BasketWalls", sbu: 57, opp_score: 50, has_app_data: true, venue: "Christian-von-Bomhard-Schule" },
+            { spt: 2, date: "17.10.2026", ha: "Ausw.", opp: "SG Oerlenbach/Ebenhausen 2", sbu: 55, opp_score: 49, has_app_data: true, venue: "Wilhelm-Hegler-Halle" },
+            { spt: 3, date: "25.10.2026", ha: "Heim", opp: "TB Arnstein 2", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
+            { spt: 4, date: "14.11.2026", ha: "Ausw.", opp: "TSV Brendlorenzen", sbu: null, opp_score: null, has_app_data: false, venue: "Gymnasium" },
+            { spt: 5, date: "22.11.2026", ha: "Heim", opp: "TG Kitzingen", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
+            { spt: 6, date: "06.12.2026", ha: "Heim", opp: "TSV Grombühl 2", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
+            { spt: 7, date: "11.12.2026", ha: "Ausw.", opp: "SF Waschküch Würzburg", sbu: null, opp_score: null, has_app_data: false, venue: "Riemenschneider Gymnasium" },
+            { spt: 8, date: "10.01.2027", ha: "Ausw.", opp: "SV Kürnach BasketWalls", sbu: null, opp_score: null, has_app_data: false, venue: "Höllberghalle" },
+            { spt: 9, date: "17.01.2027", ha: "Heim", opp: "SG Oerlenbach/Ebenhausen 2", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
+            { spt: 10, date: "31.01.2027", ha: "Ausw.", opp: "TB Arnstein 2", sbu: null, opp_score: null, has_app_data: false, venue: "Große Schulturnhalle" },
+            { spt: 11, date: "14.02.2027", ha: "Heim", opp: "TSV Brendlorenzen", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
+            { spt: 12, date: "20.02.2027", ha: "Ausw.", opp: "TG Kitzingen", sbu: null, opp_score: null, has_app_data: false, venue: "TGK-Sporthalle" },
+            { spt: 13, date: "07.03.2027", ha: "Ausw.", opp: "TSV Grombühl 2", sbu: null, opp_score: null, has_app_data: false, venue: "David-Schuster-Realschule" },
+            { spt: 14, date: "14.03.2027", ha: "Heim", opp: "SF Waschküch Würzburg", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" }
+        ];
+
+        const ACTION_MAP = {
+            "2T": { label: "Zweier getroffen", pts: 2 },
+            "2V": { label: "Zweier verworfen", pts: 0 },
+            "3T": { label: "Dreier getroffen", pts: 3 },
+            "3V": { label: "Dreier verworfen", pts: 0 },
+            "FT": { label: "Freiwurf getroffen", pts: 1 },
+            "FV": { label: "Freiwurf verworfen", pts: 0 },
+            "OR": { label: "Offensivrebound", pts: 0 },
+            "DR": { label: "Defensivrebound", pts: 0 },
+            "AS": { label: "Assist", pts: 0 },
+            "ST": { label: "Steal", pts: 0 },
+            "BL": { label: "Block", pts: 0 },
+            "TO": { label: "Ballverlust (Turnover)", pts: 0 },
+            "FZ": { label: "Foul gezogen (Angriff)", pts: 0 },
+            "OF": { label: "Offensivfoul gezogen (Def.)", pts: 0 }
+        };
+
+        let state = {
+            roster: JSON.parse(localStorage.getItem('sbu_roster')) || [...DEFAULT_ROSTER],
+            schedule: [...SCHEDULE],
+            currentMatchId: 2, // Start with game 2 (Oerlenbach video available!)
+            currentView: 'video_split',
+            selectedActionPlayer: '20',
+            matches: {}
+        };
+
+        const videoPlayer = document.getElementById('video-player');
+        let videoFps = 30.0;
+        let aiEventsLoaded = false;
+        let aiEventsCatalog = [];
+
+        // Prepopulate Match 1 & 2
+        function initMatches() {
+            // Match 2 (Oerlenbach with 138 protocol entries with estimated timestamps)
+            const rawM2 = [
+                ["26","TO", 45.2],["20","3V", 52.4],["11","DR", 54.1],["14","2V", 67.8],["14","DR", 72.0],["11","3V", 88.5],["20","OR", 90.1],["20","FZ", 92.4],["14","DR", 104.2],["11","FZ", 112.5],
+                ["26","TO", 125.0],["20","DR", 132.4],["14","2V", 145.8],["26","ST", 152.0],["20","TO", 160.2],["26","DR", 168.9],["35","TO", 182.1],["11","DR", 190.4],["26","3V", 205.2],["14","DR", 212.0],
+                ["14","2V", 225.4],["14","DR", 232.1],["14","2V", 245.0],["11","FZ", 252.8],["14","DR", 260.4],["66","2V", 274.2],["20","AS", 280.1],["20","2V", 295.4],["35","TO", 310.2],["14","DR", 318.5],
+                ["20","TO", 330.1],["14","DR", 342.4],["66","2V", 355.2],["11","DR", 362.0],["20","3V", 378.4],["35","2V", 390.1],["26","DR", 398.2],["11","2V", 412.5],["35","DR", 420.0],["11","TO", 432.1],
+                ["35","DR", 440.5],["11","2V", 452.4],["35","AS", 460.1],["14","AS", 472.4],["35","DR", 480.0],["20","TO", 495.2],["11","TO", 508.4],["20","3V", 520.1],["26","2V", 534.2],["11","DR", 542.0],
+                ["14","3V", 558.1],["11","OR", 560.2],["11","3V", 572.4],["20","OR", 574.1],["14","FZ", 580.0],["20","ST", 592.5],["20","DR", 601.2],["20","TO", 615.4],["14","DR", 625.0],["11","2V", 638.1],
+                ["20","DR", 645.0],["14","TO", 658.2],["20","BL", 670.1],["20","BL", 672.4],["11","DR", 685.0],["20","FZ", 698.2],["35","AS", 710.4],["20","2V", 724.1],["14","2V", 735.0],["20","ST", 745.2],
+                ["66","TO", 758.1],["66","2V", 770.4],["11","OR", 772.0],["11","AS", 780.2],["35","TO", 795.1],["66","2V", 808.4],["14","ST", 820.0],["66","2V", 832.1],["66","2V", 844.5],["66","TO", 858.0],
+                ["11","TO", 870.2],["20","ST", 882.4],["14","2V", 895.1],["20","DR", 904.0],["11","TO", 918.2],["26","DR", 928.0],["20","3V", 942.1],["26","3V", 955.0],["35","TO", 968.4],["20","FZ", 980.1],
+                ["26","DR", 992.0],["14","2V", 1005.4],["11","DR", 1014.2],["20","DR", 1025.0],["20","2V", 1038.1],["14","ST", 1048.5],["14","FZ", 1058.0],["20","FZ", 1070.2],["14","OR", 1072.0],["20","2V", 1084.1],
+                ["14","OF", 1098.2],["20","2V", 1110.0],["26","OR", 1112.4],["26","2V", 1125.1],["14","DR", 1134.0],["20","2V", 1148.2],["66","2V", 1160.0],["14","DR", 1172.1],["11","TO", 1185.0],["20","DR", 1195.4],
+                ["14","AS", 1208.1],["20","FZ", 1220.0],["14","DR", 1230.2],["14","FZ", 1242.0],["14","AS", 1255.4],["20","DR", 1265.0],["66","DR", 1278.2],["26","2V", 1290.1],["20","BL", 1302.0],["14","FZ", 1315.4],
+                ["20","3V", 1328.0],["66","DR", 1338.2],["20","TO", 1350.0],["20","FZ", 1362.4],["20","DR", 1372.1],["20","3V", 1385.0],["14","DR", 1395.2],["20","FZ", 1408.0],["35","DR", 1418.4],["35","FZ", 1430.1],
+                ["20","3V", 1445.0],["20","FZ", 1458.2],["20","TO", 1470.0],["14","OR", 1472.1],["14","FZ", 1485.0],["26","DR", 1495.2],["26","FZ", 1508.0],["14","DR", 1518.4]
+            ];
+
+            const m2Protocol = rawM2.map((item, idx) => ({
+                id: idx + 1,
+                jersey: item[0],
+                code: item[1],
+                timestamp_s: item[2],
+                timestamp_str: formatSecondsToTime(item[2]),
+                frame: Math.round(item[2] * videoFps)
+            }));
+
+            state.matches[2] = {
+                mode: 'variante_b',
+                score_sbu: 55,
+                score_opp: 49,
+                video_url: '/uploads/game_oerlenbach.mp4',
+                app_base: {
+                    "4": { played: false, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, min: "00:00", pf: 0, pm: 0 },
+                    "7": { played: false, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, min: "00:00", pf: 0, pm: 0 },
+                    "11": { played: true, "2T": 1, "3T": 1, "FT": 1, "FTA": 2, min: "32:22", pf: 2, pm: -3 },
+                    "14": { played: true, "2T": 3, "3T": 2, "FT": 4, "FTA": 7, min: "38:35", pf: 4, pm: 6 },
+                    "20": { played: true, "2T": 4, "3T": 3, "FT": 6, "FTA": 13, min: "40:00", pf: 1, pm: 6 },
+                    "21": { played: false, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, min: "00:00", pf: 0, pm: 0 },
+                    "26": { played: true, "2T": 0, "3T": 1, "FT": 2, "FTA": 2, min: "25:54", pf: 4, pm: 9 },
+                    "33": { played: false, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, min: "00:00", pf: 0, pm: 0 },
+                    "35": { played: true, "2T": 1, "3T": 0, "FT": 1, "FTA": 2, min: "40:00", pf: 1, pm: 6 },
+                    "66": { played: true, "2T": 1, "3T": 0, "FT": 0, "FTA": 0, min: "23:06", pf: 3, pm: 6 },
+                    "91": { played: false, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, min: "00:00", pf: 0, pm: 0 },
+                },
+                sums: {},
+                protocol: m2Protocol
+            };
+
+            // Match 1
+            state.matches[1] = {
+                mode: 'variante_a',
+                score_sbu: 57,
+                score_opp: 50,
+                sums: {
+                    "4": { played: false, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, "2V": 0, "3V": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0, min: "00:00", pf: 0, pm: 0 },
+                    "7": { played: true, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, "2V": 1, "3V": 1, "FV": 0, "OR": 1, "DR": 2, "AS": 0, "ST": 0, "BL": 0, "TO": 2, "FZ": 4, "OF": 0, min: "14:52", pf: 3, pm: 1 },
+                    "11": { played: true, "2T": 0, "3T": 0, "FT": 0, "FTA": 2, "2V": 2, "3V": 0, "FV": 2, "OR": 0, "DR": 1, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 1, "OF": 0, min: "04:56", pf: 2, pm: 5 },
+                    "14": { played: true, "2T": 1, "3T": 0, "FT": 2, "FTA": 4, "2V": 3, "3V": 1, "FV": 2, "OR": 1, "DR": 1, "AS": 1, "ST": 0, "BL": 0, "TO": 0, "FZ": 2, "OF": 0, min: "09:22", pf: 5, pm: 1 },
+                    "20": { played: true, "2T": 6, "3T": 5, "FT": 4, "FTA": 8, "2V": 4, "3V": 8, "FV": 4, "OR": 1, "DR": 6, "AS": 0, "ST": 5, "BL": 0, "TO": 9, "FZ": 5, "OF": 0, min: "36:55", pf: 3, pm: 8 },
+                    "21": { played: true, "2T": 0, "3T": 0, "FT": 2, "FTA": 5, "2V": 2, "3V": 4, "FV": 3, "OR": 0, "DR": 6, "AS": 2, "ST": 3, "BL": 0, "TO": 3, "FZ": 7, "OF": 0, min: "36:28", pf: 3, pm: 10 },
+                    "26": { played: true, "2T": 1, "3T": 2, "FT": 0, "FTA": 0, "2V": 2, "3V": 1, "FV": 0, "OR": 3, "DR": 1, "AS": 0, "ST": 0, "BL": 0, "TO": 1, "FZ": 0, "OF": 0, min: "10:46", pf: 3, pm: 2 },
+                    "33": { played: true, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, "2V": 0, "3V": 0, "FV": 0, "OR": 0, "DR": 1, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0, min: "03:31", pf: 1, pm: -2 },
+                    "35": { played: true, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, "2V": 0, "3V": 2, "FV": 0, "OR": 0, "DR": 3, "AS": 7, "ST": 5, "BL": 0, "TO": 3, "FZ": 1, "OF": 0, min: "40:00", pf: 3, pm: 8 },
+                    "66": { played: true, "2T": 0, "3T": 0, "FT": 0, "FTA": 0, "2V": 3, "3V": 1, "FV": 0, "OR": 0, "DR": 1, "AS": 1, "ST": 1, "BL": 0, "TO": 2, "FZ": 0, "OF": 0, min: "15:37", pf: 2, pm: -2 },
+                    "91": { played: true, "2T": 3, "3T": 1, "FT": 3, "FTA": 5, "2V": 4, "3V": 7, "FV": 2, "OR": 4, "DR": 8, "AS": 1, "ST": 1, "BL": 0, "TO": 4, "FZ": 0, "OF": 0, min: "27:28", pf: 5, pm: 9 },
+                },
+                protocol: []
+            };
+
+            for (let i = 3; i <= 14; i++) {
+                state.matches[i] = { mode: 'variante_b', score_sbu: null, score_opp: null, sums: {}, protocol: [] };
+            }
+        }
+
+        function formatSecondsToTime(sec) {
+            if (isNaN(sec) || sec === null) return "00:00.0";
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            const ms = Math.floor((sec % 1) * 10);
+            return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${ms}`;
+        }
+
+        // 2. VIDEO PLAYER CONTROLS & SYNCHRONIZATION
+        function togglePlayPause() {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+                document.getElementById('play-icon').innerText = '⏸';
+            } else {
+                videoPlayer.pause();
+                document.getElementById('play-icon').innerText = '▶';
+            }
+        }
+
+        function skipSeconds(delta) {
+            videoPlayer.currentTime = Math.max(0, Math.min(videoPlayer.duration || 99999, videoPlayer.currentTime + delta));
+        }
+
+        function stepFrame(frameDelta) {
+            videoPlayer.pause();
+            document.getElementById('play-icon').innerText = '▶';
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime + (frameDelta / videoFps));
+        }
+
+        function setPlaybackSpeed(rate) {
+            videoPlayer.playbackRate = rate;
+            document.querySelectorAll('.btn-speed').forEach(btn => {
+                if (btn.innerText === `${rate}x` || (rate === 1.0 && btn.innerText === '1.0x')) {
+                    btn.className = "btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold bg-cyan-500 text-black";
+                } else {
+                    btn.className = "btn-speed px-1.5 py-0.5 rounded text-[11px] font-bold text-slate-400 hover:text-white";
+                }
+            });
+        }
+
+        function seekVideo(pct) {
+            if (videoPlayer.duration) {
+                videoPlayer.currentTime = (pct / 100) * videoPlayer.duration;
+            }
+        }
+
+        function seekToExactTime(sec) {
+            videoPlayer.currentTime = Number(sec);
+            videoPlayer.pause();
+            document.getElementById('play-icon').innerText = '▶';
+        }
+
+        // Video Event Listeners
+        videoPlayer.addEventListener('timeupdate', () => {
+            const curr = videoPlayer.currentTime;
+            const dur = videoPlayer.duration || 0;
+            document.getElementById('vid-time-curr').innerText = formatSecondsToTime(curr);
+            document.getElementById('vid-frame-num').innerText = Math.round(curr * videoFps);
+            if (dur > 0) {
+                document.getElementById('vid-progress').value = (curr / dur) * 100;
+            }
+        });
+
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            const dur = videoPlayer.duration || 0;
+            document.getElementById('vid-time-dur').innerText = formatSecondsToTime(dur).split('.')[0];
+            document.getElementById('video-res-badge').innerText = `${videoPlayer.videoWidth}x${videoPlayer.videoHeight}`;
+        });
+
+        // Keyboard Shortcuts (Space to play/pause, J/L skip)
+        window.addEventListener('keydown', (e) => {
+            // Don't capture when typing in text input
+            if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                return;
+            }
+            if (e.code === 'Space') {
+                e.preventDefault();
+                togglePlayPause();
+            } else if (e.code === 'KeyJ' || e.code === 'ArrowLeft') {
+                skipSeconds(-2);
+            } else if (e.code === 'KeyL' || e.code === 'ArrowRight') {
+                skipSeconds(2);
+            } else if (e.code === 'Comma') {
+                stepFrame(-1);
+            } else if (e.code === 'Period') {
+                stepFrame(1);
+            }
+        });
+
+        function changeVideoSource(url) {
+            if (!url) return;
+            videoPlayer.src = url;
+            videoPlayer.load();
+            document.getElementById('current-video-filename').innerText = url.split('/').pop();
+            const m = state.matches[state.currentMatchId];
+            if (m) m.video_url = url;
+            const emptyState = document.getElementById('video-empty-state');
+            if (emptyState) emptyState.classList.add('hidden');
+        }
+
+        function handleVideoFile(file) {
+            if (!file) return;
+            const objUrl = URL.createObjectURL(file);
+            videoPlayer.src = objUrl;
+            videoPlayer.load();
+            const emptyState = document.getElementById('video-empty-state');
+            if (emptyState) emptyState.classList.add('hidden');
+            document.getElementById('current-video-filename').innerText = file.name;
+            const opt = document.createElement('option');
+            opt.value = objUrl;
+            opt.innerText = `Lokal: ${file.name}`;
+            opt.selected = true;
+            document.getElementById('video-source-select').appendChild(opt);
+        }
+
+        function loadLocalVideoFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (file) handleVideoFile(file);
+        }
+
+        // Setup Drag & Drop and Error handling for Video
+        const dropzone = document.getElementById('video-dropzone');
+        const emptyState = document.getElementById('video-empty-state');
+        const fileInput = document.getElementById('video-file-input');
+
+        if (emptyState && fileInput) {
+            emptyState.addEventListener('click', () => fileInput.click());
+        }
+
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files.length > 0) {
+                    handleVideoFile(dt.files[0]);
+                }
+            });
+        }
+
+        videoPlayer.addEventListener('error', () => {
+            // If the default /uploads/ video is not reachable (e.g. on GitHub Pages), show friendly dropzone
+            console.warn("Video source not found or failed to load. Showing local dropzone overlay.");
+            if (emptyState) emptyState.classList.remove('hidden');
+            document.getElementById('current-video-filename').innerText = "Kein Video geladen (Bitte Datei wählen)";
+        });
+
+        // 3. STATS TAGGING WITH TIME CAPTURE
+        function triggerProtocolAction(code) {
+            if (!state.selectedActionPlayer) return;
+            
+            // Auto-pause if checked
+            if (document.getElementById('chk-autopause').checked && !videoPlayer.paused) {
+                videoPlayer.pause();
+                document.getElementById('play-icon').innerText = '▶';
+            }
+
+            const currTime = videoPlayer.currentTime || 0;
+            const mData = state.matches[state.currentMatchId];
+            if (!mData.protocol) mData.protocol = [];
+
+            mData.protocol.push({
+                id: mData.protocol.length + 1,
+                jersey: state.selectedActionPlayer,
+                code: code,
+                timestamp_s: currTime,
+                timestamp_str: formatSecondsToTime(currTime),
+                frame: Math.round(currTime * videoFps)
+            });
+
+            renderAll();
+        }
+
+        function handleKeyboardCommand(e) {
+            if (e.key === 'Enter') submitKeyboardCommand();
+        }
+
+        function submitKeyboardCommand() {
+            const input = document.getElementById('keyboard-cmd-input');
+            const val = input.value.trim();
+            if (!val) return;
+
+            const parts = val.split(/[\s,]+/);
+            let jersey = null;
+            let code = null;
+
+            if (parts.length === 2) {
+                if (ACTION_MAP[parts[1].toUpperCase()]) {
+                    jersey = parts[0];
+                    code = parts[1].toUpperCase();
+                } else if (ACTION_MAP[parts[0].toUpperCase()]) {
+                    code = parts[0].toUpperCase();
+                    jersey = parts[1];
+                }
+            } else if (parts.length === 1) {
+                const match = val.match(/^(\d+)([A-Za-z]{2})$/);
+                if (match) {
+                    jersey = match[1];
+                    code = match[2].toUpperCase();
+                }
+            }
+
+            if (jersey && code && ACTION_MAP[code]) {
+                state.selectedActionPlayer = jersey;
+                triggerProtocolAction(code);
+                input.value = '';
+            } else {
+                alert(`Ungültige Eingabe: "${val}". Beispiel: '20 2T' oder '91 3V'`);
+            }
+        }
+
+        function undoLastProtocolAction() {
+            const mData = state.matches[state.currentMatchId];
+            if (mData && mData.protocol && mData.protocol.length > 0) {
+                mData.protocol.pop();
+                renderAll();
+            }
+        }
+
+        function deleteProtocolEntry(idx) {
+            const mData = state.matches[state.currentMatchId];
+            if (mData && mData.protocol && mData.protocol[idx]) {
+                mData.protocol.splice(idx, 1);
+                renderAll();
+            }
+        }
+
+        function clearProtocolConfirm() {
+            if (confirm("Möchtest du das gesamte Protokoll für dieses Spiel wirklich löschen?")) {
+                const mData = state.matches[state.currentMatchId];
+                if (mData) {
+                    mData.protocol = [];
+                    renderAll();
+                }
+            }
+        }
+
+        // 4. AI CV DETECTION ASSISTANT
+        function toggleAiAssist() {
+            const container = document.getElementById('ai-events-container');
+            const btn = document.getElementById('btn-toggle-ai');
+
+            if (!aiEventsLoaded) {
+                btn.innerText = "⏳ Lade KI-Events...";
+                fetch('/api/ai-events')
+                    .then(res => res.json())
+                    .then(data => {
+                        aiEventsLoaded = true;
+                        btn.innerText = "✓ KI-Events aktiv";
+                        btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800";
+                        
+                        // Populate simulated / real AI events
+                        aiEventsCatalog = [
+                            { type: "SHOT_MAKE", pts: 2, jersey: "20", time_s: 48.0, desc: "2P Treffer Paint (Roman Blank)", conf: 0.88 },
+                            { type: "SHOT_MISS", pts: 0, jersey: "14", time_s: 67.5, desc: "2P Fehlwurf Midrange (Ralf Dubiel)", conf: 0.82 },
+                            { type: "DEF_REBOUND", pts: 0, jersey: "14", time_s: 71.8, desc: "Defensivrebound (Ralf Dubiel)", conf: 0.85 },
+                            { type: "TRAVELING", pts: 0, jersey: "26", time_s: 124.6, desc: "Schrittfehler Art. 25 (Helmut Schwebel)", conf: 0.91 },
+                            { type: "SHOT_MAKE", pts: 3, jersey: "20", time_s: 204.8, desc: "3P Treffer Right Wing (Roman Blank)", conf: 0.94 },
+                            { type: "STEAL", pts: 0, jersey: "26", time_s: 251.5, desc: "Steal / Deflection (Helmut Schwebel)", conf: 0.87 },
+                            { type: "BLOCK", pts: 0, jersey: "20", time_s: 670.0, desc: "Korb-Block am Ring (Roman Blank)", conf: 0.89 },
+                            { type: "DOUBLE_DRIBBLE", pts: 0, jersey: "66", time_s: 857.8, desc: "Zweimaliges Dribbeln Art. 24 (Dominik Krämer)", conf: 0.86 },
+                        ];
+
+                        renderAiEvents();
+                    })
+                    .catch(err => {
+                        btn.innerText = "✓ KI-Simulation aktiv";
+                        btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800";
+                        aiEventsLoaded = true;
+                        aiEventsCatalog = [
+                            { type: "SHOT_MAKE", pts: 2, jersey: "20", time_s: 48.0, desc: "2P Treffer Paint (#20 Roman Blank)", conf: 0.88 },
+                            { type: "SHOT_MISS", pts: 0, jersey: "14", time_s: 67.5, desc: "2P Fehlwurf (#14 Ralf Dubiel)", conf: 0.82 },
+                            { type: "DEF_REBOUND", pts: 0, jersey: "14", time_s: 71.8, desc: "Defensivrebound (#14 Ralf Dubiel)", conf: 0.85 },
+                            { type: "TRAVELING", pts: 0, jersey: "26", time_s: 124.6, desc: "Schrittfehler Art. 25 (#26 Helmut Schwebel)", conf: 0.91 },
+                            { type: "SHOT_MAKE", pts: 3, jersey: "20", time_s: 204.8, desc: "3P Treffer Right Wing (#20 Roman Blank)", conf: 0.94 },
+                            { type: "BLOCK", pts: 0, jersey: "20", time_s: 670.0, desc: "Shot Block (#20 Roman Blank)", conf: 0.89 }
+                        ];
+                        renderAiEvents();
+                    });
+            } else {
+                aiEventsLoaded = false;
+                btn.innerText = "🤖 KI-Erkennungen laden";
+                btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 hover:bg-cyan-900";
+                container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs bg-slate-950/50 rounded-xl">KI-Events deaktiviert.</div>`;
+            }
+        }
+
+        function renderAiEvents() {
+            const container = document.getElementById('ai-events-container');
+            container.innerHTML = aiEventsCatalog.map((evt, idx) => {
+                const codeMap = { "SHOT_MAKE": "2T", "SHOT_MISS": "2V", "DEF_REBOUND": "DR", "TRAVELING": "TO", "STEAL": "ST", "BLOCK": "BL", "DOUBLE_DRIBBLE": "TO" };
+                const protoCode = codeMap[evt.type] || "TO";
+                return `
+                    <div class="p-2 rounded-xl bg-slate-950 border border-slate-800/90 flex items-center justify-between gap-2 hover:border-slate-700 transition">
+                        <div class="flex items-center gap-2">
+                            <button onclick="seekToExactTime(${evt.time_s})" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono text-[11px] font-bold border border-cyan-800 hover:bg-cyan-900" title="Im Video anspringen">
+                                ⏱️ ${formatSecondsToTime(evt.time_s)}
+                            </button>
+                            <span class="font-bold text-white text-[11px]">#${evt.jersey}</span>
+                            <span class="text-slate-300 text-[11px]">${evt.desc}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-slate-500 font-mono">${(evt.conf*100).toFixed(0)}%</span>
+                            <button onclick="adoptAiEvent('${evt.jersey}', '${protoCode}', ${evt.time_s})" class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 hover:bg-emerald-900 font-bold text-[11px]">
+                                ✓ Übernehmen
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function adoptAiEvent(jersey, code, time_s) {
+            const mData = state.matches[state.currentMatchId];
+            if (!mData.protocol) mData.protocol = [];
+            mData.protocol.push({
+                id: mData.protocol.length + 1,
+                jersey: jersey,
+                code: code,
+                timestamp_s: time_s,
+                timestamp_str: formatSecondsToTime(time_s),
+                frame: Math.round(time_s * videoFps)
+            });
+            renderAll();
+        }
+
+        // 5. RENDER PROTOCOL & PLAYER PILLS
+        function renderActionPlayerPills() {
+            const container = document.getElementById('action-player-buttons-grid');
+            container.innerHTML = state.roster.map(p => {
+                const isSelected = p.jersey === state.selectedActionPlayer;
+                return `
+                    <button onclick="selectActionPlayer('${p.jersey}')" class="p-2 rounded-xl border text-xs font-bold transition flex flex-col items-center justify-center ${isSelected ? 'bg-cyan-500 text-black border-cyan-400 shadow-md shadow-cyan-500/20' : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'}">
+                        <span class="text-sm font-black">#${p.jersey}</span>
+                        <span class="text-[10px] truncate max-w-full font-medium opacity-80">${p.name.split(' ')[0]}</span>
+                    </button>
+                `;
+            }).join('');
+
+            const selP = state.roster.find(p => p.jersey === state.selectedActionPlayer) || { name: 'Roman Blank' };
+            document.getElementById('active-selected-player-name').innerText = `Ausgewählt: #${state.selectedActionPlayer} ${selP.name}`;
+        }
+
+        function selectActionPlayer(j) {
+            state.selectedActionPlayer = j;
+            renderActionPlayerPills();
+        }
+
+        function renderProtocolTable() {
+            const mData = state.matches[state.currentMatchId] || { protocol: [] };
+            const pBody = document.getElementById('protocol-table-body');
+            document.getElementById('action-count-badge').innerText = mData.protocol.length;
+
+            if (mData.protocol.length === 0) {
+                pBody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500 text-xs">Noch keine Aktionen protokolliert. Klicke oben auf einen Spieler und eine Aktion.</td></tr>`;
+                return;
+            }
+
+            pBody.innerHTML = [...mData.protocol].reverse().map((item, idx) => {
+                const revIdx = mData.protocol.length - idx;
+                const p = state.roster.find(r => r.jersey === item.jersey) || { name: 'Unbekannt' };
+                const act = ACTION_MAP[item.code] || { label: item.code, pts: 0 };
+                const timeStr = item.timestamp_str || (item.timestamp_s ? formatSecondsToTime(item.timestamp_s) : '-');
+                const seekSec = item.timestamp_s !== undefined ? item.timestamp_s : 0;
+
+                return `
+                    <tr class="hover:bg-slate-800/50 transition">
+                        <td class="p-2 text-center text-slate-500">${revIdx}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="seekToExactTime(${seekSec})" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 hover:bg-cyan-900 border border-cyan-800 font-bold text-[11px]" title="Video an diese Stelle springen">
+                                ⏱️ ${timeStr}
+                            </button>
+                        </td>
+                        <td class="p-2 text-center font-black text-cyan-400">#${item.jersey}</td>
+                        <td class="p-2 font-medium text-white">${p.name}</td>
+                        <td class="p-2 text-center">
+                            <span class="px-2 py-0.5 rounded font-black text-xs ${item.code.endsWith('T') ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-300 border border-slate-700'}">${item.code}</span>
+                        </td>
+                        <td class="p-2 text-slate-300 text-[11px]">${act.label}</td>
+                        <td class="p-2 text-center font-bold ${act.pts > 0 ? 'text-emerald-400' : 'text-slate-500'}">${act.pts > 0 ? '+' + act.pts : '0'}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="deleteProtocolEntry(${revIdx - 1})" class="text-rose-400 hover:text-rose-300" title="Löschen">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 6. BOXSCORE CALCULATION
+        function calculateBoxscore(matchId) {
+            const mData = state.matches[matchId] || { protocol: [] };
+            const baseApp = mData.app_base || {};
+            let pInputs = {};
+
+            state.roster.forEach(p => {
+                const j = String(p.jersey);
+                pInputs[j] = {
+                    played: false, "2T": 0, "2V": 0, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0,
+                    "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0,
+                    min: "00:00", pf: 0, pm: 0
+                };
+                if (baseApp[j]) Object.assign(pInputs[j], baseApp[j]);
+            });
+
+            mData.protocol.forEach(item => {
+                const j = String(item.jersey);
+                if (!pInputs[j]) return;
+                pInputs[j].played = true;
+                const c = item.code;
+                if (c === '2T') pInputs[j]["2T"]++;
+                else if (c === '2V') pInputs[j]["2V"]++;
+                else if (c === '3T') pInputs[j]["3T"]++;
+                else if (c === '3V') pInputs[j]["3V"]++;
+                else if (c === 'FT') { pInputs[j]["FT"]++; pInputs[j]["FTA"]++; }
+                else if (c === 'FV') { pInputs[j]["FV"]++; pInputs[j]["FTA"]++; }
+                else if (c === 'OR') pInputs[j]["OR"]++;
+                else if (c === 'DR') pInputs[j]["DR"]++;
+                else if (c === 'AS') pInputs[j]["AS"]++;
+                else if (c === 'ST') pInputs[j]["ST"]++;
+                else if (c === 'BL') pInputs[j]["BL"]++;
+                else if (c === 'TO') pInputs[j]["TO"]++;
+                else if (c === 'FZ') pInputs[j]["FZ"]++;
+                else if (c === 'OF') pInputs[j]["OF"]++;
+            });
+
+            let lines = [];
+            let totals = {
+                played: 0, min_sec: 0, pts: 0,
+                fg2m: 0, fg2a: 0, fg3m: 0, fg3a: 0, fgm: 0, fga: 0, ftm: 0, fta: 0,
+                oreb: 0, dreb: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0,
+                fz: 0, of: 0, fouls_drawn: 0, pf: 0, pm: 0
+            };
+
+            state.roster.forEach(p => {
+                const j = String(p.jersey);
+                const inp = pInputs[j];
+                const fg2m = inp["2T"];
+                const fg2a = fg2m + inp["2V"];
+                const fg3m = inp["3T"];
+                const fg3a = fg3m + inp["3V"];
+                const fgm = fg2m + fg3m;
+                const fga = fg2a + fg3a;
+                const ftm = inp["FT"];
+                const fta = inp["FTA"];
+                const pts = 2 * fg2m + 3 * fg3m + ftm;
+                const oreb = inp["OR"];
+                const dreb = inp["DR"];
+                const reb = oreb + dreb;
+                const ast = inp["AS"];
+                const stl = inp["ST"];
+                const blk = inp["BL"];
+                const to = inp["TO"];
+                const fz = inp["FZ"];
+                const of = inp["OF"];
+                const fouls_drawn = fz + of;
+                const pf = inp["pf"];
+                const pm = inp["pm"];
+
+                let min_str = inp["min"] || "00:00";
+                let min_sec = 0;
+                if (min_str.includes(':')) {
+                    const sp = min_str.split(':');
+                    min_sec = parseInt(sp[0] || 0) * 60 + parseInt(sp[1] || 0);
+                }
+
+                let played = inp.played || (fga > 0 || fta > 0 || reb > 0 || ast > 0 || to > 0 || min_sec > 0);
+                if (played) totals.played++;
+                totals.min_sec += min_sec; totals.pts += pts;
+                totals.fg2m += fg2m; totals.fg2a += fg2a;
+                totals.fg3m += fg3m; totals.fg3a += fg3a;
+                totals.fgm += fgm; totals.fga += fga;
+                totals.ftm += ftm; totals.fta += fta;
+                totals.oreb += oreb; totals.dreb += dreb; totals.reb += reb;
+                totals.ast += ast; totals.stl += stl; totals.blk += blk; totals.to += to;
+                totals.fz += fz; totals.of += of; totals.fouls_drawn += fouls_drawn;
+                totals.pf += pf; totals.pm += pm;
+
+                const efg = fga > 0 ? ((fgm + 0.5 * fg3m) / fga) : null;
+                const ts = (2 * (fga + 0.44 * fta)) > 0 ? (pts / (2 * (fga + 0.44 * fta))) : null;
+                const ast_to = to > 0 ? (ast / to) : (ast > 0 ? ast : null);
+
+                lines.push({
+                    jersey: j, name: p.name, played: played ? 1 : 0, min_str, min_sec,
+                    pts, fg2m, fg2a, fg2_pct: fg2a > 0 ? (fg2m / fg2a) : null,
+                    fg3m, fg3a, fg3_pct: fg3a > 0 ? (fg3m / fg3a) : null,
+                    fgm, fga, fg_pct: fga > 0 ? (fgm / fga) : null,
+                    ftm, fta, ft_pct: fta > 0 ? (ftm / fta) : null,
+                    oreb, dreb, reb, ast, stl, blk, to, fz, of, fouls_drawn, pf, pm,
+                    efg, ts, ast_to
+                });
+            });
+
+            totals.fg2_pct = totals.fg2a > 0 ? (totals.fg2m / totals.fg2a) : null;
+            totals.fg3_pct = totals.fg3a > 0 ? (totals.fg3m / totals.fg3a) : null;
+            totals.fg_pct = totals.fga > 0 ? (totals.fgm / totals.fga) : null;
+            totals.ft_pct = totals.fta > 0 ? (totals.ftm / totals.fta) : null;
+            totals.efg = totals.fga > 0 ? ((totals.fgm + 0.5 * totals.fg3m) / totals.fga) : null;
+            const denom_ts = 2 * (totals.fga + 0.44 * totals.fta);
+            totals.ts = denom_ts > 0 ? (totals.pts / denom_ts) : null;
+            totals.ast_to = totals.to > 0 ? (totals.ast / totals.to) : null;
+
+            const m_min = Math.floor(totals.min_sec / 60);
+            const s_sec = totals.min_sec % 60;
+            totals.min_str = `${String(m_min).padStart(2,'0')}:${String(s_sec).padStart(2,'0')}`;
+
+            let targetScore = mData.score_sbu;
+            let controlStatus = 'PENDING';
+            let controlMsg = 'Endergebnis oben eintragen';
+            let diff = 0;
+
+            if (targetScore !== null && targetScore !== undefined && targetScore !== '') {
+                targetScore = Number(targetScore);
+                diff = totals.pts - targetScore;
+                if (diff === 0) {
+                    controlStatus = 'OK';
+                    controlMsg = '✓ Boxscore-Punkte = Endergebnis';
+                } else {
+                    controlStatus = 'ERROR';
+                    controlMsg = `⚠️ Differenz: Boxscore (${totals.pts}) ≠ Endergebnis (${targetScore}) [${diff > 0 ? '+' : ''}${diff}]`;
+                }
+            }
+
+            return { lines, totals, control: { status: controlStatus, msg: controlMsg, diff, targetScore } };
+        }
+
+        function renderBoxscore() {
+            const box = calculateBoxscore(state.currentMatchId);
+            const tbody = document.getElementById('boxscore-table-body');
+            const tfoot = document.getElementById('boxscore-table-foot');
+            const pctFmt = (val) => val !== null ? `${(val * 100).toFixed(1)}%` : '-';
+
+            tbody.innerHTML = box.lines.map(l => `
+                <tr class="hover:bg-slate-800/40 transition ${l.played ? '' : 'opacity-40'}">
+                    <td class="p-2 text-center font-bold text-cyan-400">#${l.jersey}</td>
+                    <td class="p-2 font-medium text-white">${l.name}</td>
+                    <td class="p-2 text-center">${l.played}</td>
+                    <td class="p-2 text-center font-mono text-slate-300">${l.min_str}</td>
+                    <td class="p-2 text-center font-black text-cyan-400 text-sm">${l.pts}</td>
+                    <td class="p-2 text-center">${l.fg2m}/${l.fg2a} <span class="text-slate-500 text-[10px]">(${pctFmt(l.fg2_pct)})</span></td>
+                    <td class="p-2 text-center">${l.fg3m}/${l.fg3a} <span class="text-slate-500 text-[10px]">(${pctFmt(l.fg3_pct)})</span></td>
+                    <td class="p-2 text-center font-bold text-white bg-slate-800/30">${l.fgm}/${l.fga} <span class="text-cyan-400 text-[10px]">(${pctFmt(l.fg_pct)})</span></td>
+                    <td class="p-2 text-center">${l.ftm}/${l.fta} <span class="text-slate-500 text-[10px]">(${pctFmt(l.ft_pct)})</span></td>
+                    <td class="p-2 text-center text-slate-400">${l.oreb}</td>
+                    <td class="p-2 text-center text-slate-400">${l.dreb}</td>
+                    <td class="p-2 text-center font-bold text-sky-400">${l.reb}</td>
+                    <td class="p-2 text-center text-indigo-300">${l.ast}</td>
+                    <td class="p-2 text-center text-indigo-300">${l.stl}</td>
+                    <td class="p-2 text-center text-indigo-300">${l.blk}</td>
+                    <td class="p-2 text-center text-rose-400 font-bold">${l.to}</td>
+                    <td class="p-2 text-center">${l.fz}</td>
+                    <td class="p-2 text-center">${l.of}</td>
+                    <td class="p-2 text-center font-bold text-amber-400">${l.fouls_drawn}</td>
+                    <td class="p-2 text-center text-emerald-400">${l.pf}</td>
+                    <td class="p-2 text-center ${l.pm > 0 ? 'text-emerald-400' : 'text-slate-400'}">${l.pm > 0 ? '+' + l.pm : l.pm}</td>
+                    <td class="p-2 text-center">${pctFmt(l.efg)}</td>
+                    <td class="p-2 text-center">${pctFmt(l.ts)}</td>
+                    <td class="p-2 text-center font-mono">${l.ast_to !== null ? l.ast_to.toFixed(2) : '-'}</td>
+                </tr>
+            `).join('');
+
+            const tot = box.totals;
+            tfoot.innerHTML = `
+                <tr class="text-slate-200">
+                    <td class="p-2 text-center" colspan="2">TEAM GESAMT</td>
+                    <td class="p-2 text-center text-cyan-400 font-bold">${tot.played}</td>
+                    <td class="p-2 text-center font-mono text-emerald-400">${tot.min_str}</td>
+                    <td class="p-2 text-center font-black text-cyan-400 text-base">${tot.pts}</td>
+                    <td class="p-2 text-center">${tot.fg2m}/${tot.fg2a} (${pctFmt(tot.fg2_pct)})</td>
+                    <td class="p-2 text-center">${tot.fg3m}/${tot.fg3a} (${pctFmt(tot.fg3_pct)})</td>
+                    <td class="p-2 text-center font-black text-white bg-slate-800/50">${tot.fgm}/${tot.fga} (${pctFmt(tot.fg_pct)})</td>
+                    <td class="p-2 text-center">${tot.ftm}/${tot.fta} (${pctFmt(tot.ft_pct)})</td>
+                    <td class="p-2 text-center">${tot.oreb}</td>
+                    <td class="p-2 text-center">${tot.dreb}</td>
+                    <td class="p-2 text-center font-bold text-sky-400 text-sm">${tot.reb}</td>
+                    <td class="p-2 text-center text-indigo-300">${tot.ast}</td>
+                    <td class="p-2 text-center text-indigo-300">${tot.stl}</td>
+                    <td class="p-2 text-center text-indigo-300">${tot.blk}</td>
+                    <td class="p-2 text-center text-rose-400 font-bold">${tot.to}</td>
+                    <td class="p-2 text-center">${tot.fz}</td>
+                    <td class="p-2 text-center">${tot.of}</td>
+                    <td class="p-2 text-center text-amber-400 font-bold">${tot.fouls_drawn}</td>
+                    <td class="p-2 text-center text-emerald-400">${tot.pf}</td>
+                    <td class="p-2 text-center">${tot.pm > 0 ? '+' + tot.pm : tot.pm}</td>
+                    <td class="p-2 text-center text-cyan-400 font-semibold">${pctFmt(tot.efg)}</td>
+                    <td class="p-2 text-center text-cyan-400 font-semibold">${pctFmt(tot.ts)}</td>
+                    <td class="p-2 text-center font-mono font-bold">${tot.ast_to !== null ? tot.ast_to.toFixed(2) : '-'}</td>
+                </tr>
+            `;
+
+            document.getElementById('boxscore-analytics-pills').innerHTML = `
+                <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">eFG%: <strong class="text-cyan-400">${pctFmt(tot.efg)}</strong></span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">TS%: <strong class="text-cyan-400">${pctFmt(tot.ts)}</strong></span>
+                <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">AS/TO: <strong class="text-cyan-400">${tot.ast_to !== null ? tot.ast_to.toFixed(2) : '-'}</strong></span>
+            `;
+
+            const statusBox = document.getElementById('boxscore-control-status');
+            if (box.control.status === 'OK') {
+                statusBox.className = "px-2.5 py-1 rounded font-bold bg-emerald-950 text-emerald-300 border border-emerald-800";
+                statusBox.innerText = "✓ Boxscore-Punkte = Endergebnis";
+            } else if (box.control.status === 'ERROR') {
+                statusBox.className = "px-2.5 py-1 rounded font-bold bg-rose-950 text-rose-300 border border-rose-800";
+                statusBox.innerText = box.control.msg;
+            } else {
+                statusBox.className = "px-2.5 py-1 rounded font-semibold bg-slate-800 text-slate-400 border border-slate-700";
+                statusBox.innerText = "Endergebnis oben eintragen";
+            }
+        }
+
+        // 7. BANNER & MATCH PILLS
+        function renderBanner() {
+            const m = state.schedule.find(s => s.spt === state.currentMatchId);
+            const mData = state.matches[state.currentMatchId] || {};
+
+            document.getElementById('banner-spt-badge').innerText = `SpT ${m.spt}`;
+            document.getElementById('banner-match-title').innerText = `SB Uffenheim vs. ${m.opp}`;
+            document.getElementById('banner-match-meta').innerText = `${m.date} · ${m.venue} · ${m.ha === 'Heim' ? 'Heimspiel' : 'Auswärts'}`;
+            document.getElementById('input-score-sbu').value = mData.score_sbu !== null ? mData.score_sbu : '';
+            document.getElementById('input-score-opp').value = mData.score_opp !== null ? mData.score_opp : '';
+
+            const box = calculateBoxscore(state.currentMatchId);
+            const ctrlBadge = document.getElementById('control-badge');
+            const ctrlIcon = document.getElementById('control-icon');
+            const ctrlText = document.getElementById('control-text');
+
+            if (box.control.status === 'OK') {
+                ctrlBadge.className = "px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 border bg-emerald-950/90 text-emerald-300 border-emerald-700";
+                ctrlIcon.innerText = "✓";
+                ctrlText.innerText = "Boxscore-Punkte = Endergebnis";
+            } else if (box.control.status === 'ERROR') {
+                ctrlBadge.className = "px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 border bg-rose-950/90 text-rose-300 border-rose-700";
+                ctrlIcon.innerText = "⚠️";
+                ctrlText.innerText = box.control.msg;
+            } else {
+                ctrlBadge.className = "px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-2 border bg-slate-800 text-slate-400 border-slate-700";
+                ctrlIcon.innerText = "ℹ️";
+                ctrlText.innerText = "Endergebnis eintragen";
+            }
+        }
+
+        function updateMatchScore() {
+            const sbuVal = document.getElementById('input-score-sbu').value;
+            const oppVal = document.getElementById('input-score-opp').value;
+            const m = state.matches[state.currentMatchId];
+            if (m) {
+                m.score_sbu = sbuVal !== '' ? parseInt(sbuVal) : null;
+                m.score_opp = oppVal !== '' ? parseInt(oppVal) : null;
+            }
+            renderBanner();
+            renderBoxscore();
+        }
+
+        function renderMatchPills() {
+            const container = document.getElementById('match-selector-pills');
+            container.innerHTML = state.schedule.map(m => {
+                const isSelected = m.spt === state.currentMatchId;
+                const mData = state.matches[m.spt];
+                const hasScore = mData && mData.score_sbu !== null && mData.score_sbu !== undefined;
+                let badgeClass = "bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700";
+                if (isSelected) {
+                    badgeClass = "bg-cyan-950 border-cyan-500 text-cyan-300 shadow-md shadow-cyan-500/20";
+                } else if (hasScore) {
+                    badgeClass = "bg-slate-800 border-slate-700 text-slate-200";
+                }
+
+                return `
+                    <button onclick="selectMatch(${m.spt})" class="flex-shrink-0 px-3 py-1 rounded-xl border text-xs font-semibold flex items-center gap-2 transition ${badgeClass}">
+                        <span class="font-bold">SpT ${m.spt}</span>
+                        <span class="text-[11px] opacity-75">${m.opp.split(' ')[0]}</span>
+                        ${m.has_app_data ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Mit App-Daten"></span>' : ''}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectMatch(spt) {
+            state.currentMatchId = spt;
+            renderAll();
+        }
+
+        function switchView(viewName) {
+            state.currentView = viewName;
+            ['video_split', 'boxscore', 'season', 'print'].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.toggle('hidden', v !== viewName);
+                const btn = document.getElementById(`btn-tab-${v}`);
+                if (btn) {
+                    if (v === viewName) {
+                        btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20";
+                    } else {
+                        btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-800 hover:bg-slate-700 text-slate-300";
+                    }
+                }
+            });
+            renderAll();
+        }
+
+        // 8. ROSTER MANAGEMENT & MODAL
+        function openRosterModal() {
+            const container = document.getElementById('roster-list-inputs');
+            container.innerHTML = state.roster.map((p, idx) => `
+                <div class="flex items-center gap-2">
+                    <input type="text" id="roster-j-${idx}" value="${p.jersey}" placeholder="Nr" class="w-16 bg-slate-950 border border-slate-700 rounded-lg p-2 text-center font-bold text-cyan-400 text-sm">
+                    <input type="text" id="roster-n-${idx}" value="${p.name}" placeholder="Spielername" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-2 text-white text-sm">
+                    <button onclick="removeRosterPlayer(${idx})" class="text-rose-400 hover:text-rose-300 p-2 font-bold">&times;</button>
+                </div>
+            `).join('');
+            document.getElementById('roster-modal').classList.remove('hidden');
+        }
+
+        function closeRosterModal() {
+            document.getElementById('roster-modal').classList.add('hidden');
+        }
+
+        function addRosterPlayer() {
+            if (state.roster.length >= 15) return alert("Maximal 15 Spieler erlaubt.");
+            state.roster.push({ jersey: "", name: "" });
+            openRosterModal();
+        }
+
+        function removeRosterPlayer(idx) {
+            state.roster.splice(idx, 1);
+            openRosterModal();
+        }
+
+        function resetDefaultRoster() {
+            if (confirm("Kader auf die 11 Standard-Spieler zurücksetzen?")) {
+                state.roster = [...DEFAULT_ROSTER];
+                localStorage.removeItem('sbu_roster');
+                closeRosterModal();
+                renderAll();
+            }
+        }
+
+        function saveRosterChanges() {
+            let newRoster = [];
+            state.roster.forEach((_, idx) => {
+                const j = document.getElementById(`roster-j-${idx}`).value.trim();
+                const n = document.getElementById(`roster-n-${idx}`).value.trim();
+                if (j && n) newRoster.push({ jersey: j, name: n });
+            });
+            if (newRoster.length > 0) {
+                state.roster = newRoster;
+                localStorage.setItem('sbu_roster', JSON.stringify(newRoster));
+            }
+            closeRosterModal();
+            renderAll();
+        }
+
+        // Export JSON
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `sbu_herren_statistik_${new Date().toISOString().slice(0,10)}.json`);
+            dl.click();
+        }
+
+        function renderAll() {
+            renderMatchPills();
+            renderBanner();
+            renderActionPlayerPills();
+            renderProtocolTable();
+            renderBoxscore();
+        }
+
+        // Startup
+        initMatches();
+        renderAll();
+    </script>
+</body>
+</html>

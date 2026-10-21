@@ -3,6 +3,13 @@ from ultralytics import YOLO
 import torch
 from .primitives import Ball, Rim, PlayerCapsule, bbox_to_ball, bbox_to_player, bbox_to_rim
 
+try:
+    from sahi import AutoDetectionModel
+    from sahi.predict import get_sliced_prediction
+    HAS_SAHI = True
+except ImportError:
+    HAS_SAHI = False
+
 
 DEFAULT_MODEL_CANDIDATES = ("yolo26n.pt", "yolo11n.pt", "yolov8n.pt")
 
@@ -154,29 +161,96 @@ class HoopDetector:
                 detections.append(box.xyxy[0].tolist())
         return detections
 
-    def detect_ball(self, frame) -> list[Ball]:
+    def detect_ball(self, frame, rim_focus_boxes=None, use_sahi: bool = False) -> list[Ball]:
         """
         Detects sports balls (class 32 in COCO) and returns Ball primitives.
+        Supports:
+        1. Korb-Fokus-Tracking: high-res inference on focused rim zones (radius ~220px).
+        2. SAHI (Sliced Aided Hyper Inference) for small 12-16px balls in wide shots.
+        3. Standard full-frame YOLO with adaptive confidence fallback.
         """
-        results = self.model(frame, classes=[32], verbose=False, conf=0.25)
-        detections = []
-        for r in results:
-            for box in r.boxes:
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                detections.append(bbox_to_ball(x1, y1, x2, y2))
-        return detections
+        raw_boxes = self.detect_ball_raw(frame, rim_focus_boxes=rim_focus_boxes, use_sahi=use_sahi)
+        return [bbox_to_ball(b[0], b[1], b[2], b[3]) for b in raw_boxes]
 
-    def detect_ball_raw(self, frame) -> list[list[float]]:
-        """
-        Detects sports balls and returns raw bounding boxes.
-        Kept for backward compatibility with ROI tracker init.
-        """
-        results = self.model(frame, classes=[32], verbose=False, conf=0.25)
-        detections = []
-        for r in results:
-            for box in r.boxes:
-                detections.append(box.xyxy[0].tolist())
-        return detections
+    def detect_ball_raw(self, frame, rim_focus_boxes=None, use_sahi: bool = False) -> list[list[float]]:
+        raw_boxes = []
+
+        # 1. Korb-Fokus-Tracking: If rim focus boxes provided, crop & run with high sensitivity
+        if rim_focus_boxes:
+            fh, fw = frame.shape[:2]
+            for box in rim_focus_boxes:
+                rx1, ry1, rx2, ry2 = box
+                rx1, ry1 = max(0, int(rx1)), max(0, int(ry1))
+                rx2, ry2 = min(fw, int(rx2)), min(fh, int(ry2))
+                if rx2 - rx1 > 20 and ry2 - ry1 > 20:
+                    patch = frame[ry1:ry2, rx1:rx2]
+                    patch_res = self.model(patch, classes=[32], verbose=False, conf=0.12)
+                    for r in patch_res:
+                        for pbox in r.boxes:
+                            bx1, by1, bx2, by2 = pbox.xyxy[0].tolist()
+                            raw_boxes.append([bx1 + rx1, by1 + ry1, bx2 + rx1, by2 + ry1])
+
+        # 2. SAHI Sliced Inference
+        if (use_sahi or os.getenv("HOOP_STATS_USE_SAHI", "0") == "1") and HAS_SAHI:
+            if not hasattr(self, "sahi_model") or self.sahi_model is None:
+                try:
+                    self.sahi_model = AutoDetectionModel.from_pretrained(
+                        model_type='yolov8',
+                        model_path=self.selected_model,
+                        confidence_threshold=0.15,
+                        device='cuda:0' if torch.cuda.is_available() else 'cpu'
+                    )
+                except Exception:
+                    self.sahi_model = None
+
+            if getattr(self, "sahi_model", None) is not None:
+                try:
+                    sahi_res = get_sliced_prediction(
+                        frame,
+                        self.sahi_model,
+                        slice_height=320,
+                        slice_width=320,
+                        overlap_height_ratio=0.2,
+                        overlap_width_ratio=0.2,
+                        verbose=0
+                    )
+                    for pred in sahi_res.object_prediction_list:
+                        if pred.category.id == 32 or "ball" in str(pred.category.name).lower():
+                            bbox = pred.bbox
+                            raw_boxes.append([bbox.minx, bbox.miny, bbox.maxx, bbox.maxy])
+                except Exception:
+                    pass
+
+        # 3. Standard full-frame YOLO detection (conf=0.18 for higher recall on balls)
+        if not raw_boxes:
+            results = self.model(frame, classes=[32], verbose=False, conf=0.18)
+            for r in results:
+                for rbox in r.boxes:
+                    raw_boxes.append(rbox.xyxy[0].tolist())
+
+        # Deduplicate overlapping boxes
+        if len(raw_boxes) <= 1:
+            return raw_boxes
+
+        deduped = []
+        for b in raw_boxes:
+            is_dup = False
+            for d in deduped:
+                ix1 = max(b[0], d[0])
+                iy1 = max(b[1], d[1])
+                ix2 = min(b[2], d[2])
+                iy2 = min(b[3], d[3])
+                inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+                area_b = (b[2] - b[0]) * (b[3] - b[1])
+                area_d = (d[2] - d[0]) * (d[3] - d[1])
+                union = area_b + area_d - inter
+                if union > 0 and (inter / union) > 0.4:
+                    is_dup = True
+                    break
+            if not is_dup:
+                deduped.append(b)
+
+        return deduped
 
     def get_jersey_crop(self, frame, bbox):
         """
