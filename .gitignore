@@ -16,7 +16,10 @@ htmlcov/
 
 # User data
 uploads/
-results/
+results/*
+!results/*.json
+!results/*.md
+results/vectors3d*.json
 tests/test_fast.mp4
 tests/test_slow.mp4
 

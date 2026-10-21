@@ -65,7 +65,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add config/pipeline_params.json results/optimization_report.md
+          git add -f config/pipeline_params.json results/optimization_report.md
           git commit -m "chore: auto-tuned AI detection parameters via ground-truth loop [skip ci]" || echo "No changes to commit"
           git push origin main
 
