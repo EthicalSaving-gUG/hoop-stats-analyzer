@@ -16,6 +16,13 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
         @media print {
             body { background: white !important; color: black !important; padding: 0 !important; }
             .no-print { display: none !important; }
@@ -28,6 +35,61 @@
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+    <!-- PASSWORD PROTECTION GATE (SBU) -->
+    <div id="auth-gate-overlay" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 text-center">
+            <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-slate-950 text-3xl shadow-xl shadow-cyan-500/25">
+                🏀
+            </div>
+
+            <div>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 tracking-wider uppercase">
+                    SB Uffenheim Intern
+                </span>
+                <h2 class="text-xl font-extrabold text-white mt-2">Geschützter Bereich</h2>
+                <p class="text-xs text-slate-400 mt-1">Bitte gib das Vereins-Passwort ein, um auf die Video- & Statistik-Suite zuzugreifen.</p>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                <div class="relative">
+                    <input 
+                        type="password" 
+                        id="auth-password-input" 
+                        placeholder="Passwort eingeben..." 
+                        autocomplete="current-password"
+                        autofocus
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 text-white rounded-xl px-4 py-3 text-center text-sm font-semibold tracking-widest placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-500 outline-none transition"
+                    >
+                </div>
+
+                <div id="auth-error-msg" class="text-xs text-rose-400 font-medium hidden">
+                    ⚠️ Falsches Passwort. Bitte erneut versuchen.
+                </div>
+
+                <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-slate-300">
+                        <input type="checkbox" id="auth-remember-me" checked class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
+                        <span>Angemeldet bleiben</span>
+                    </label>
+                    <span class="text-[11px] text-slate-500 font-mono">Tipp: SBU</span>
+                </div>
+
+                <button 
+                    type="submit" 
+                    class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/25 transition active:scale-[0.98]"
+                >
+                    Entsperren →
+                </button>
+            </form>
+
+            <div class="pt-2 border-t border-slate-800/80 text-[11px] text-slate-500">
+                SB Uffenheim Basketball Herren 2026/27
+            </div>
+        </div>
+    </div>
 
     <!-- Top Navigation Header -->
     <header class="no-print bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-4 py-2.5">
@@ -93,6 +155,9 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>Cloud-App</span>
                 </span>
+                <button onclick="handleLogout()" title="Bereich sperren" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-rose-950/70 hover:text-rose-400 text-slate-400 border border-slate-700 transition flex items-center gap-1.5">
+                    <span>🔒</span> <span class="hidden sm:inline">Sperren</span>
+                </button>
             </div>
         </div>
 
@@ -1558,9 +1623,75 @@
             renderBoxscore();
         }
 
+
+        // 9. AUTHENTICATION GATE (Passwort: SBU)
+        const AUTH_KEY = 'sbu_auth_token';
+        const AUTH_HASH = '2fca4651e2f7590541702ece659e4d123a59cfc3eb590c2311ba1d4099d1dfad'; // SHA-256 for "SBU"
+
+        async function sha256(str) {
+            try {
+                const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch(e) {
+                return str;
+            }
+        }
+
+        async function checkAuthOnLoad() {
+            const saved = localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY);
+            const overlay = document.getElementById('auth-gate-overlay');
+            if (!overlay) return;
+
+            if (saved === 'authenticated' || saved === AUTH_HASH) {
+                overlay.classList.add('hidden');
+            } else {
+                overlay.classList.remove('hidden');
+                setTimeout(() => {
+                    const inp = document.getElementById('auth-password-input');
+                    if (inp) inp.focus();
+                }, 100);
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('auth-password-input');
+            const errorMsg = document.getElementById('auth-error-msg');
+            const remember = document.getElementById('auth-remember-me').checked;
+            const val = (input.value || '').trim();
+
+            const hash = await sha256(val.toUpperCase());
+            if (val.toUpperCase() === 'SBU' || hash === AUTH_HASH) {
+                const storage = remember ? localStorage : sessionStorage;
+                storage.setItem(AUTH_KEY, 'authenticated');
+                document.getElementById('auth-gate-overlay').classList.add('hidden');
+                if (errorMsg) errorMsg.classList.add('hidden');
+                input.value = '';
+            } else {
+                if (errorMsg) errorMsg.classList.remove('hidden');
+                input.classList.add('border-rose-500', 'animate-shake');
+                setTimeout(() => input.classList.remove('border-rose-500', 'animate-shake'), 600);
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem(AUTH_KEY);
+            sessionStorage.removeItem(AUTH_KEY);
+            const overlay = document.getElementById('auth-gate-overlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                const inp = document.getElementById('auth-password-input');
+                if (inp) {
+                    inp.value = '';
+                    inp.focus();
+                }
+            }
+        }
+
         // Startup
         initMatches();
         renderAll();
+        checkAuthOnLoad();
     </script>
 </body>
 </html>

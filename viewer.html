@@ -419,6 +419,22 @@
 </head>
 <body>
 
+    <!-- SBU PASSWORD GATE (VIEWER) -->
+    <div id="auth-gate-overlay" style="position: fixed; inset: 0; z-index: 99999; background: rgba(7, 9, 14, 0.96); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: rgba(16, 20, 28, 0.9); border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 24px; padding: 36px 30px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 15px 50px rgba(0,0,0,0.8);">
+            <div style="font-size: 42px; margin-bottom: 12px;">🏀</div>
+            <div style="font-size: 11px; font-weight: 700; color: #00f2fe; letter-spacing: 1.5px; text-transform: uppercase;">SB Uffenheim Multi-Cam</div>
+            <div style="font-size: 20px; font-weight: 800; color: #fff; margin: 8px 0 8px 0;">Geschützter Bereich</div>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 24px;">Bitte Vereins-Passwort eingeben, um auf die Multi-Kamera-Telemetrie zuzugreifen.</p>
+            <form onsubmit="handleAuthSubmit(event)">
+                <input type="password" id="auth-password-input" placeholder="Passwort..." autocomplete="current-password" autofocus style="width: 100%; background: #07090e; border: 1px solid rgba(0, 242, 254, 0.4); color: #fff; padding: 14px; border-radius: 14px; text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 4px; outline: none; margin-bottom: 14px;">
+                <div id="auth-error-msg" style="color: #ff073a; font-size: 12px; margin-bottom: 12px; display: none;">⚠️ Falsches Passwort. (Tipp: SBU)</div>
+                <button type="submit" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 14px; color: #07090e; font-weight: 800; font-size: 14px; cursor: pointer;">Entsperren →</button>
+            </form>
+        </div>
+    </div>
+
+
     <!-- Header Section -->
     <header>
         <div class="logo-group">
@@ -858,6 +874,56 @@
         window.onload = () => {
             connectSignaling();
         };
+    
+    // AUTHENTICATION GATE (Passwort: SBU)
+    const AUTH_KEY = 'sbu_auth_token';
+    const AUTH_HASH = '2fca4651e2f7590541702ece659e4d123a59cfc3eb590c2311ba1d4099d1dfad';
+
+    async function sha256(str) {
+        try {
+            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch(e) {
+            return str;
+        }
+    }
+
+    async function checkAuthOnLoad() {
+        const saved = localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY);
+        const overlay = document.getElementById('auth-gate-overlay');
+        if (!overlay) return;
+
+        if (saved === 'authenticated' || saved === AUTH_HASH) {
+            overlay.style.display = 'none';
+        } else {
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                const inp = document.getElementById('auth-password-input');
+                if (inp) inp.focus();
+            }, 100);
+        }
+    }
+
+    async function handleAuthSubmit(e) {
+        if (e) e.preventDefault();
+        const input = document.getElementById('auth-password-input');
+        const errorMsg = document.getElementById('auth-error-msg');
+        const val = (input.value || '').trim();
+
+        const hash = await sha256(val.toUpperCase());
+        if (val.toUpperCase() === 'SBU' || hash === AUTH_HASH) {
+            localStorage.setItem(AUTH_KEY, 'authenticated');
+            document.getElementById('auth-gate-overlay').style.display = 'none';
+            if (errorMsg) errorMsg.style.display = 'none';
+            input.value = '';
+        } else {
+            if (errorMsg) errorMsg.style.display = 'block';
+            input.style.borderColor = '#ff073a';
+            setTimeout(() => input.style.borderColor = 'rgba(0, 242, 254, 0.4)', 1000);
+        }
+    }
+
+        checkAuthOnLoad();
     </script>
 </body>
 </html>
