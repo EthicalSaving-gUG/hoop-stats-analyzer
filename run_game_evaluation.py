@@ -30,7 +30,7 @@ from hoop_stats.coach_report import CoachReportGenerator
 
 def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 4000, skip_frames: int = 3,
                    use_sahi: bool = False, multi_quarter: bool = False, full_game: bool = False,
-                   frames_per_quarter: int = 1500):
+                   frames_per_quarter: int = 1500, match_id: int = 2, output_path: str = None):
     mode_str = "Komplettes Spiel (Vollständige 4 Viertel Q1-Q4)" if full_game else (
         f"Multi-Quarter Scan ({frames_per_quarter} Frames / Viertel)" if multi_quarter else f"Fokussiertes Segment ({start_frame} bis {start_frame + max_frames})"
     )
@@ -390,6 +390,21 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
     clip_registry.export_manifest(manifest_path)
     print(f"🎬 Stat-verknüpfte Video-Clips exportiert ({len(clip_registry.clips)} Clips): {manifest_path}")
 
+    # Export ai_events.json directly for web app
+    ai_events = [
+        {
+            "type": c.event_type,
+            "pts": c.points,
+            "jersey": c.jersey or "",
+            "time_s": round(c.start_time_s, 2),
+            "desc": c.description,
+            "conf": c.metadata.get("confidence", 0.88) if c.metadata else 0.88
+        }
+        for c in clip_registry.clips
+    ]
+    with open("results/ai_events.json", "w", encoding="utf-8") as f:
+        json.dump(ai_events, f, indent=2)
+
     # 10. AI Coach Game Summary & Four Factors (SportsVisio Coach Mode Parity)
     coach_data = coach_reporter.generate_report(tracked_events, canonical_summary or {})
     coach_report_md_path = "results/coach_game_report.md"
@@ -413,21 +428,24 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
         "ground_truth": OFFICIAL_GROUND_TRUTH_UFFENHEIM,
     }
 
-    report_path = "results/match_oerlenbach_evaluation.json"
+    report_path = output_path or f"results/match_spt{match_id}_evaluation.json"
+    def json_default(obj):
+        import numpy as np
+        if isinstance(obj, (np.integer, np.int64, np.int32)):
+            return int(obj)
+        elif isinstance(obj, (np.floating, np.float32, np.float64)):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return str(obj)
+
     with open(report_path, "w", encoding="utf-8") as f:
-        def json_default(obj):
-            import numpy as np
-            if isinstance(obj, (np.integer, np.int64, np.int32)):
-                return int(obj)
-            elif isinstance(obj, (np.floating, np.float32, np.float64)):
-                return float(obj)
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            return str(obj)
-
         json.dump(report, f, indent=4, default=json_default)
-
     print(f"Detaillierter JSON-Report gespeichert unter: {report_path}\n")
+
+    if match_id == 2 and report_path != "results/match_oerlenbach_evaluation.json":
+        with open("results/match_oerlenbach_evaluation.json", "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=4, default=json_default)
     return report
 
 
@@ -441,6 +459,8 @@ if __name__ == "__main__":
     parser.add_argument("--multi-quarter", action="store_true", default=False)
     parser.add_argument("--full-game", action="store_true", default=False)
     parser.add_argument("--frames-per-quarter", type=int, default=1500)
+    parser.add_argument("--match-id", type=int, default=2, help="Spieltag ID (1-14)")
+    parser.add_argument("--output", default=None, help="Custom output JSON path")
     args = parser.parse_args()
 
     run_evaluation(
@@ -451,5 +471,7 @@ if __name__ == "__main__":
         use_sahi=args.sahi,
         multi_quarter=args.multi_quarter,
         full_game=args.full_game,
-        frames_per_quarter=args.frames_per_quarter
+        frames_per_quarter=args.frames_per_quarter,
+        match_id=args.match_id,
+        output_path=args.output
     )

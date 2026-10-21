@@ -1,0 +1,148 @@
+name: 🏀 Process Basketball Match Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: 'Direct Video URL (Nextcloud, Dropbox, S3, or direct MP4 link)'
+        required: true
+        type: string
+      match_id:
+        description: 'Spieltag ID (1-14)'
+        required: true
+        default: '2'
+      skip_frames:
+        description: 'Frame Skip (3 = Balanced, 4-5 = Fast CPU)'
+        required: true
+        default: '3'
+      mode:
+        description: 'Analysis Mode'
+        type: choice
+        options:
+          - 'multi_quarter'
+          - 'full_game'
+          - 'segment'
+        default: 'multi_quarter'
+      frames_per_quarter:
+        description: 'Frames per quarter for multi_quarter mode'
+        required: true
+        default: '2000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: process-game-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  analyze-video:
+    name: 🤖 AI Video Analysis (SpT ${{ inputs.match_id }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 🧹 Maximize Runner Disk Space
+        run: |
+          echo "=== Disk Space Before Cleanup ==="
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+          echo "=== Disk Space After Cleanup ==="
+          df -h
+
+      - name: 📦 Install System Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 ffmpeg curl
+
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: ⚡ Install Lightweight CPU PyTorch & Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: 📥 Download Match Video
+        run: |
+          python -c "
+          import sys, urllib.request, re, os
+
+          url = '${{ inputs.video_url }}'.strip()
+          print(f'Original URL: {url}')
+
+          # Auto-convert Dropbox links for direct download
+          if 'dropbox.com' in url:
+              if 'dl=0' in url:
+                  url = url.replace('dl=0', 'dl=1')
+              elif 'raw=1' not in url and 'dl=1' not in url:
+                  url += ('&dl=1' if '?' in url else '?dl=1')
+              print(f'Converted Dropbox URL: {url}')
+
+          # Auto-convert Nextcloud links if needed
+          if ('nextcloud' in url or 'owncloud' in url) and not url.endswith('/download'):
+              if '/s/' in url:
+                  url = url.rstrip('/') + '/download'
+                  print(f'Converted Nextcloud URL: {url}')
+
+          out_file = 'input_video.mp4'
+          print(f'Downloading video to {out_file}...')
+          os.system(f'curl -L --retry 3 --retry-delay 5 -o {out_file} \"{url}\"')
+          "
+
+          if [ ! -f input_video.mp4 ] || [ ! -s input_video.mp4 ]; then
+            echo "❌ Error: Video download failed or file is empty!"
+            exit 1
+          fi
+
+          echo "✅ Video downloaded successfully:"
+          ls -lh input_video.mp4
+
+      - name: 🧠 Run Hoop-Stats AI Pipeline
+        run: |
+          MODE_ARG="--multi-quarter"
+          if [ "${{ inputs.mode }}" = "full_game" ]; then
+            MODE_ARG="--full-game"
+          elif [ "${{ inputs.mode }}" = "segment" ]; then
+            MODE_ARG=""
+          fi
+
+          echo "Starting evaluation with mode: $MODE_ARG, skip: ${{ inputs.skip_frames }}"
+          python run_game_evaluation.py \
+            --video input_video.mp4 \
+            --match-id ${{ inputs.match_id }} \
+            --skip ${{ inputs.skip_frames }} \
+            --frames-per-quarter ${{ inputs.frames_per_quarter }} \
+            $MODE_ARG
+
+      - name: 🧹 Remove Video to Free Space
+        run: |
+          rm -f input_video.mp4
+
+      - name: 🚀 Commit & Publish Results to GitHub Pages
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add results/
+          git commit -m "chore: automated AI match analysis for SpT ${{ inputs.match_id }} [skip ci]" || echo "No changes to commit"
+          git push origin main
+
+      - name: 📤 Upload Evaluation Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: match-${{ inputs.match_id }}-results
+          path: results/
+          retention-days: 30

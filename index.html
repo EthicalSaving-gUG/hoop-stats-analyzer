@@ -1177,25 +1177,41 @@
 
             if (!aiEventsLoaded) {
                 btn.innerText = "⏳ Lade KI-Events...";
-                fetch('/api/ai-events')
-                    .then(res => res.json())
+                
+                // Fetch AI events: 1) local static JSON, 2) API endpoint, 3) clips manifest
+                fetch('./results/ai_events.json')
+                    .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+                    .catch(() => fetch('/api/ai-events').then(r => r.json()))
+                    .catch(() => fetch('./results/stat_linked_clips_manifest.json').then(r => r.json()))
                     .then(data => {
                         aiEventsLoaded = true;
-                        btn.innerText = "✓ KI-Events aktiv";
+                        btn.innerText = "✓ KI-Events geladen";
                         btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-800";
                         
-                        // Populate simulated / real AI events
-                        aiEventsCatalog = [
-                            { type: "SHOT_MAKE", pts: 2, jersey: "20", time_s: 48.0, desc: "2P Treffer Paint (Roman Blank)", conf: 0.88 },
-                            { type: "SHOT_MISS", pts: 0, jersey: "14", time_s: 67.5, desc: "2P Fehlwurf Midrange (Ralf Dubiel)", conf: 0.82 },
-                            { type: "DEF_REBOUND", pts: 0, jersey: "14", time_s: 71.8, desc: "Defensivrebound (Ralf Dubiel)", conf: 0.85 },
-                            { type: "TRAVELING", pts: 0, jersey: "26", time_s: 124.6, desc: "Schrittfehler Art. 25 (Helmut Schwebel)", conf: 0.91 },
-                            { type: "SHOT_MAKE", pts: 3, jersey: "20", time_s: 204.8, desc: "3P Treffer Right Wing (Roman Blank)", conf: 0.94 },
-                            { type: "STEAL", pts: 0, jersey: "26", time_s: 251.5, desc: "Steal / Deflection (Helmut Schwebel)", conf: 0.87 },
-                            { type: "BLOCK", pts: 0, jersey: "20", time_s: 670.0, desc: "Korb-Block am Ring (Roman Blank)", conf: 0.89 },
-                            { type: "DOUBLE_DRIBBLE", pts: 0, jersey: "66", time_s: 857.8, desc: "Zweimaliges Dribbeln Art. 24 (Dominik Krämer)", conf: 0.86 },
-                        ];
-
+                        if (Array.isArray(data) && data.length > 0) {
+                            aiEventsCatalog = data;
+                        } else if (data && data.clips && data.clips.length > 0) {
+                            aiEventsCatalog = data.clips.map(c => ({
+                                type: c.event_type,
+                                pts: c.points || 0,
+                                jersey: c.jersey || "",
+                                time_s: c.start_time_s || (c.event_frame / 30.0),
+                                desc: c.description || c.event_type,
+                                conf: c.metadata && c.metadata.confidence ? c.metadata.confidence : 0.88
+                            }));
+                        } else {
+                            // Populate simulated / real AI events
+                            aiEventsCatalog = [
+                                { type: "SHOT_MAKE", pts: 2, jersey: "20", time_s: 48.0, desc: "2P Treffer Paint (Roman Blank)", conf: 0.88 },
+                                { type: "SHOT_MISS", pts: 0, jersey: "14", time_s: 67.5, desc: "2P Fehlwurf Midrange (Ralf Dubiel)", conf: 0.82 },
+                                { type: "DEF_REBOUND", pts: 0, jersey: "14", time_s: 71.8, desc: "Defensivrebound (Ralf Dubiel)", conf: 0.85 },
+                                { type: "TRAVELING", pts: 0, jersey: "26", time_s: 124.6, desc: "Schrittfehler Art. 25 (Helmut Schwebel)", conf: 0.91 },
+                                { type: "SHOT_MAKE", pts: 3, jersey: "20", time_s: 204.8, desc: "3P Treffer Right Wing (Roman Blank)", conf: 0.94 },
+                                { type: "STEAL", pts: 0, jersey: "26", time_s: 251.5, desc: "Steal / Deflection (Helmut Schwebel)", conf: 0.87 },
+                                { type: "BLOCK", pts: 0, jersey: "20", time_s: 670.0, desc: "Korb-Block am Ring (Roman Blank)", conf: 0.89 },
+                                { type: "DOUBLE_DRIBBLE", pts: 0, jersey: "66", time_s: 857.8, desc: "Zweimaliges Dribbeln Art. 24 (Dominik Krämer)", conf: 0.86 },
+                            ];
+                        }
                         renderAiEvents();
                     })
                     .catch(err => {
