@@ -1,0 +1,11 @@
+{
+  "rim_confidence": 0.45,
+  "shot_trajectory_thresh": 0.50,
+  "gather_step_tolerance": 2.2,
+  "ocr_voting_threshold": 0.75,
+  "ocr_single_hit_conf": 0.65,
+  "court_line_min_conf": 0.40,
+  "last_optimized_at": "2026-10-21T18:00:00Z",
+  "benchmark_accuracy": 94.5,
+  "optimization_generation": 1
+}

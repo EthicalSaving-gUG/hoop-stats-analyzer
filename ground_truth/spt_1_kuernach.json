@@ -1,0 +1,49 @@
+{
+  "match_id": 1,
+  "date": "11.10.2026",
+  "team": "SB Uffenheim",
+  "opponent": "SV Kürnach BasketWalls",
+  "final_score": {
+    "uffenheim": 57,
+    "kuernach": 50
+  },
+  "quarters": {
+    "q1": {"sbu": 14, "opp": 12},
+    "q2": {"sbu": 16, "opp": 11},
+    "q3": {"sbu": 15, "opp": 14},
+    "q4": {"sbu": 12, "opp": 13}
+  },
+  "team_totals": {
+    "points": 57,
+    "fgm": 19,
+    "fga": 60,
+    "fg2m": 11,
+    "fg2a": 38,
+    "fg3m": 8,
+    "fg3a": 22,
+    "ftm": 11,
+    "fta": 24,
+    "reb": 48,
+    "oreb": 11,
+    "dreb": 37,
+    "assists": 11,
+    "turnovers": 21,
+    "turnovers_traveling": 5,
+    "turnovers_bad_pass": 13,
+    "steals": 10,
+    "blocks": 0,
+    "fouls_drawn": 20
+  },
+  "players": {
+    "7": { "name": "Paul Kevin Krämer-Moore", "points": 0, "reb": 3, "assists": 0, "turnovers": 2, "fouls": 3 },
+    "11": { "name": "Pierre Reichl", "points": 0, "reb": 1, "assists": 0, "turnovers": 0, "fouls": 2 },
+    "14": { "name": "Ralf Dubiel", "points": 4, "reb": 2, "assists": 1, "turnovers": 0, "fouls": 5 },
+    "20": { "name": "Roman Blank", "points": 31, "reb": 7, "assists": 0, "turnovers": 9, "fouls": 3 },
+    "21": { "name": "Dominik Schäfer", "points": 2, "reb": 6, "assists": 2, "turnovers": 3, "fouls": 3 },
+    "26": { "name": "Helmut Schwebel", "points": 8, "reb": 4, "assists": 0, "turnovers": 1, "fouls": 3 },
+    "33": { "name": "Fabian Temme", "points": 0, "reb": 1, "assists": 0, "turnovers": 0, "fouls": 1 },
+    "35": { "name": "Christian Drumm", "points": 0, "reb": 3, "assists": 7, "turnovers": 3, "fouls": 3 },
+    "66": { "name": "Dominik Krämer", "points": 0, "reb": 1, "assists": 1, "turnovers": 2, "fouls": 2 },
+    "91": { "name": "Arthur Apinyan", "points": 12, "reb": 12, "assists": 1, "turnovers": 4, "fouls": 5 }
+  }
+}

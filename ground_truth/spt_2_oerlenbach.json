@@ -1,0 +1,93 @@
+{
+  "match_id": 2,
+  "date": "17.10.2026",
+  "team": "SB Uffenheim",
+  "opponent": "SG Oerlenbach/Ebenhausen 2",
+  "final_score": {
+    "uffenheim": 55,
+    "oerlenbach": 49
+  },
+  "quarters": {
+    "q1": {"sbu": 13, "opp": 11},
+    "q2": {"sbu": 14, "opp": 14},
+    "q3": {"sbu": 16, "opp": 12},
+    "q4": {"sbu": 12, "opp": 12}
+  },
+  "team_totals": {
+    "points": 55,
+    "fgm": 17,
+    "fga": 56,
+    "fg2m": 10,
+    "fg2a": 37,
+    "fg3m": 7,
+    "fg3a": 19,
+    "ftm": 14,
+    "fta": 26,
+    "reb": 45,
+    "oreb": 7,
+    "dreb": 38,
+    "assists": 7,
+    "turnovers": 20,
+    "turnovers_traveling": 6,
+    "turnovers_bad_pass": 11,
+    "steals": 6,
+    "blocks": 3,
+    "fouls_drawn": 18
+  },
+  "players": {
+    "11": {
+      "name": "Pierre Reichl",
+      "points": 6,
+      "fgm": 2, "fga": 7,
+      "fg2m": 1, "fg2a": 4,
+      "fg3m": 1, "fg3a": 3,
+      "ftm": 1, "fta": 2,
+      "reb": 8, "assists": 1, "turnovers": 5, "fouls": 2
+    },
+    "14": {
+      "name": "Ralf Dubiel",
+      "points": 3,
+      "fgm": 1, "fga": 6,
+      "fg2m": 1, "fg2a": 5,
+      "fg3m": 0, "fg3a": 1,
+      "ftm": 1, "fta": 4,
+      "reb": 5, "assists": 2, "turnovers": 1, "fouls": 5
+    },
+    "20": {
+      "name": "Roman Blank",
+      "points": 23,
+      "fgm": 7, "fga": 20,
+      "fg2m": 4, "fg2a": 11,
+      "fg3m": 3, "fg3a": 9,
+      "ftm": 6, "fta": 13,
+      "reb": 12, "assists": 1, "turnovers": 4, "fouls": 1
+    },
+    "26": {
+      "name": "Helmut Schwebel",
+      "points": 5,
+      "fgm": 1, "fga": 4,
+      "fg2m": 0, "fg2a": 2,
+      "fg3m": 1, "fg3a": 2,
+      "ftm": 2, "fta": 2,
+      "reb": 4, "assists": 0, "turnovers": 3, "fouls": 4
+    },
+    "35": {
+      "name": "Christian Drumm",
+      "points": 3,
+      "fgm": 1, "fga": 5,
+      "fg2m": 1, "fg2a": 3,
+      "fg3m": 0, "fg3a": 2,
+      "ftm": 1, "fta": 2,
+      "reb": 7, "assists": 3, "turnovers": 3, "fouls": 1
+    },
+    "66": {
+      "name": "Dominik Krämer",
+      "points": 2,
+      "fgm": 1, "fga": 4,
+      "fg2m": 1, "fg2a": 4,
+      "fg3m": 0, "fg3a": 0,
+      "ftm": 0, "fta": 0,
+      "reb": 3, "assists": 0, "turnovers": 2, "fouls": 3
+    }
+  }
+}
