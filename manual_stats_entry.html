@@ -123,6 +123,9 @@
                     <span>📁 Lokale Datei</span>
                     <input type="file" id="video-file-input" accept="video/*" onchange="loadLocalVideoFile(event)" class="hidden">
                 </label>
+                <button onclick="openVideoUrlModal()" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-700 cursor-pointer transition flex items-center gap-1" title="Video über Web-Link (Nextcloud, Dropbox, S3, direkte MP4-URL) laden">
+                    <span>🌐 Web-URL</span>
+                </button>
             </div>
 
             <!-- Quick Action Toolbar -->
@@ -249,6 +252,14 @@
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-700 text-[11px] text-cyan-300 font-semibold">
                                 ⚡ 100% lokal im Browser – kein 6 GB Cloud-Upload, 0 ms Latenz
                             </span>
+                            <div class="flex items-center gap-2 mt-4">
+                                <button onclick="event.stopPropagation(); document.getElementById('video-file-input').click();" class="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20">
+                                    <span>📁 Datei wählen</span>
+                                </button>
+                                <button onclick="event.stopPropagation(); openVideoUrlModal();" class="px-3 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-600/50 font-bold text-xs flex items-center gap-1.5">
+                                    <span>🌐 Web-URL eingeben</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Floating Big Play Overlay Indicator -->
@@ -678,6 +689,70 @@
         </div>
 
     </main>
+
+
+    <!-- VIDEO URL INPUT MODAL -->
+    <div id="video-url-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🌐</span>
+                    <h3 class="font-extrabold text-white text-base">Video-Web-URL laden</h3>
+                </div>
+                <button onclick="closeVideoUrlModal()" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+            </div>
+
+            <p class="text-xs text-slate-400 leading-relaxed">
+                Füge hier eine direkte Web-Adresse zu einem Spielvideo ein (z. B. aus eurer Vereins-Nextcloud, Google Drive, Dropbox, einem S3-Bucket oder eigenem Webserver).
+            </p>
+
+            <form onsubmit="handleVideoUrlSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Direkte Video-URL (MP4, WebM, HLS, MKV):</label>
+                    <div class="relative flex items-center">
+                        <input 
+                            type="url" 
+                            id="input-video-url" 
+                            placeholder="https://cloud.beispiel.de/sbu-spiel-2.mp4" 
+                            required
+                            class="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-white rounded-xl px-3.5 py-2.5 text-xs font-mono outline-none transition pr-20"
+                        >
+                        <button type="button" onclick="pasteVideoUrlFromClipboard()" class="absolute right-1.5 px-2.5 py-1 text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg border border-slate-700">
+                            Einfügen
+                        </button>
+                    </div>
+                    <p id="video-url-error" class="text-[11px] text-rose-400 mt-1 hidden"></p>
+                </div>
+
+                <!-- Recent URLs list -->
+                <div id="recent-video-urls-container" class="space-y-1.5 hidden">
+                    <span class="text-[11px] font-semibold text-slate-400">Kürzlich verwendete Video-URLs:</span>
+                    <div id="recent-video-urls-list" class="space-y-1 max-h-32 overflow-y-auto"></div>
+                </div>
+
+                <!-- Helpful Tips for Nextcloud / Dropbox / Drive -->
+                <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[11px] text-slate-400 space-y-1.5">
+                    <div class="font-bold text-slate-300 flex items-center gap-1">
+                        <span>💡</span> <span>Tipps für Cloud-Freigaben:</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-0.5 text-slate-400">
+                        <li><strong class="text-slate-300">Nextcloud / ownCloud:</strong> Öffentlichen Link teilen und <code class="text-cyan-300 bg-slate-900 px-1 rounded">/download</code> an die URL anhängen.</li>
+                        <li><strong class="text-slate-300">Dropbox:</strong> Link-Endung von <code class="text-cyan-300 bg-slate-900 px-1 rounded">?dl=0</code> auf <code class="text-cyan-300 bg-slate-900 px-1 rounded">?raw=1</code> ändern.</li>
+                        <li><strong class="text-slate-300">Eigener Webserver / S3:</strong> Achte darauf, dass der Server <code class="text-cyan-300 bg-slate-900 px-1 rounded">CORS (Access-Control-Allow-Origin: *)</code> erlaubt.</li>
+                    </ul>
+                </div>
+
+                <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeVideoUrlModal()" class="px-3.5 py-2 rounded-xl text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold">
+                        Abbrechen
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-md shadow-cyan-500/20">
+                        Video laden →
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- ROSTER MODAL -->
     <div id="roster-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -1623,6 +1698,128 @@
             renderBoxscore();
         }
 
+
+
+        // 10. WEB VIDEO URL HANDLER
+        function openVideoUrlModal() {
+            const modal = document.getElementById('video-url-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            const inp = document.getElementById('input-video-url');
+            if (inp) {
+                inp.value = '';
+                inp.focus();
+            }
+            renderRecentVideoUrls();
+        }
+
+        function closeVideoUrlModal() {
+            const modal = document.getElementById('video-url-modal');
+            if (modal) modal.classList.add('hidden');
+            const err = document.getElementById('video-url-error');
+            if (err) err.classList.add('hidden');
+        }
+
+        async function pasteVideoUrlFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text && text.startsWith('http')) {
+                    document.getElementById('input-video-url').value = text;
+                }
+            } catch (e) {
+                console.warn('Clipboard read failed:', e);
+            }
+        }
+
+        function handleVideoUrlSubmit(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('input-video-url');
+            const errEl = document.getElementById('video-url-error');
+            let url = (input.value || '').trim();
+
+            if (!url) return;
+
+            // Auto-convert Dropbox share links
+            if (url.includes('dropbox.com') && url.includes('dl=0')) {
+                url = url.replace('dl=0', 'raw=1');
+            }
+
+            // Verify basic URL format
+            try {
+                new URL(url);
+            } catch (err) {
+                if (errEl) {
+                    errEl.innerText = "Ungültige URL. Bitte mit https:// beginnen.";
+                    errEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            loadVideoFromUrl(url);
+            saveRecentVideoUrl(url);
+            closeVideoUrlModal();
+        }
+
+        function loadVideoFromUrl(url) {
+            if (!url) return;
+            videoPlayer.src = url;
+            videoPlayer.load();
+
+            const emptyState = document.getElementById('video-empty-state');
+            if (emptyState) emptyState.classList.add('hidden');
+
+            try {
+                const domain = new URL(url).hostname;
+                const filename = url.split('/').pop().split('?')[0] || 'Web-Stream';
+                const label = `🌐 ${domain}: ${filename.length > 15 ? filename.slice(0, 15) + '...' : filename}`;
+                document.getElementById('current-video-filename').innerText = label;
+
+                const select = document.getElementById('video-source-select');
+                let opt = Array.from(select.options).find(o => o.value === url);
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = url;
+                    opt.innerText = label;
+                    select.appendChild(opt);
+                }
+                opt.selected = true;
+            } catch(e) {
+                document.getElementById('current-video-filename').innerText = url;
+            }
+
+            const m = state.matches[state.currentMatchId];
+            if (m) m.video_url = url;
+        }
+
+        function saveRecentVideoUrl(url) {
+            let recents = JSON.parse(localStorage.getItem('sbu_recent_video_urls') || '[]');
+            recents = [url, ...recents.filter(u => u !== url)].slice(0, 5);
+            localStorage.setItem('sbu_recent_video_urls', JSON.stringify(recents));
+        }
+
+        function renderRecentVideoUrls() {
+            const container = document.getElementById('recent-video-urls-container');
+            const list = document.getElementById('recent-video-urls-list');
+            if (!container || !list) return;
+
+            const recents = JSON.parse(localStorage.getItem('sbu_recent_video_urls') || '[]');
+            if (recents.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            list.innerHTML = recents.map(u => `
+                <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] hover:border-slate-700">
+                    <span class="text-cyan-300 font-mono truncate flex-1 cursor-pointer" onclick="document.getElementById('input-video-url').value = '${u}'" title="${u}">
+                        ${u}
+                    </span>
+                    <button type="button" onclick="loadVideoFromUrl('${u}'); closeVideoUrlModal();" class="text-xs px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-400 font-semibold hover:bg-cyan-900">
+                        Laden
+                    </button>
+                </div>
+            `).join('');
+        }
 
         // 9. AUTHENTICATION GATE (Passwort: SBU)
         const AUTH_KEY = 'sbu_auth_token';
