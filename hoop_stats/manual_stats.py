@@ -356,3 +356,136 @@ class BoxscoreCalculator:
                 aggregated[j][code] = aggregated[j].get(code, 0) + 1
 
         return aggregated
+
+    @classmethod
+    def export_boxscore_csv(cls, box: dict, delimiter: str = ";") -> str:
+        """Exports calculated boxscore to standard CSV format with UTF-8 BOM."""
+        import io
+        import csv
+        output = io.StringIO()
+        output.write('\ufeff')
+        writer = csv.writer(output, delimiter=delimiter)
+
+        headers = [
+            "Nr", "Name", "Einsatz", "Minuten", "Punkte",
+            "2P_Treffer", "2P_Versuche", "2P_Quote",
+            "3P_Treffer", "3P_Versuche", "3P_Quote",
+            "FG_Treffer", "FG_Versuche", "FG_Quote",
+            "FT_Treffer", "FT_Versuche", "FT_Quote",
+            "Off_Reb", "Def_Reb", "Rebounds_Ges",
+            "Assists", "Steals", "Blocks", "Turnovers",
+            "Fouls_gezogen", "Pers_Fouls", "EFF", "Plus_Minus"
+        ]
+        writer.writerow(headers)
+
+        def pct(val):
+            return f"{round(val * 100, 1):.1f}%" if val is not None else "-"
+
+        for p in box.get("players", []):
+            eff = (p.get("pts", 0) + p.get("Reb", 0) + p.get("AS", 0) + p.get("ST", 0) + p.get("BL", 0)) - (
+                (p.get("FG_V", 0) - p.get("FG_T", 0)) + (p.get("FW_V", 0) - p.get("FW_T", 0)) + p.get("TO", 0)
+            )
+            writer.writerow([
+                p.get("jersey", ""),
+                p.get("name", ""),
+                "Ja" if p.get("played") else "Nein",
+                p.get("min_formatted", "00:00"),
+                p.get("pts", 0),
+                p.get("2P_T", 0), p.get("2P_V", 0), pct(p.get("2P_PCT")),
+                p.get("3P_T", 0), p.get("3P_V", 0), pct(p.get("3P_PCT")),
+                p.get("FG_T", 0), p.get("FG_V", 0), pct(p.get("FG_PCT")),
+                p.get("FW_T", 0), p.get("FW_V", 0), pct(p.get("FW_PCT")),
+                p.get("OR", 0), p.get("DR", 0), p.get("Reb", 0),
+                p.get("AS", 0), p.get("ST", 0), p.get("BL", 0), p.get("TO", 0),
+                p.get("fouls_drawn", 0), p.get("PF", 0), eff, p.get("plus_minus", 0)
+            ])
+
+        tot = box.get("team_totals", {})
+        tot_eff = (tot.get("pts", 0) + tot.get("Reb", 0) + tot.get("AS", 0) + tot.get("ST", 0) + tot.get("BL", 0)) - (
+            (tot.get("FG_V", 0) - tot.get("FG_T", 0)) + (tot.get("FW_V", 0) - tot.get("FW_T", 0)) + tot.get("TO", 0)
+        )
+        writer.writerow([
+            "GESAMT",
+            "Team",
+            tot.get("played", 0),
+            tot.get("min_formatted", "00:00"),
+            tot.get("pts", 0),
+            tot.get("2P_T", 0), tot.get("2P_V", 0), pct(tot.get("2P_PCT")),
+            tot.get("3P_T", 0), tot.get("3P_V", 0), pct(tot.get("3P_PCT")),
+            tot.get("FG_T", 0), tot.get("FG_V", 0), pct(tot.get("FG_PCT")),
+            tot.get("FW_T", 0), tot.get("FW_V", 0), pct(tot.get("FW_PCT")),
+            tot.get("OR", 0), tot.get("DR", 0), tot.get("Reb", 0),
+            tot.get("AS", 0), tot.get("ST", 0), tot.get("BL", 0), tot.get("TO", 0),
+            tot.get("fouls_drawn", 0), tot.get("PF", 0), tot_eff, tot.get("plus_minus", 0)
+        ])
+
+        return output.getvalue()
+
+    @classmethod
+    def export_boxscore_markdown(cls, box: dict, match_info: Optional[dict] = None) -> str:
+        """Exports calculated boxscore to clean GitHub-Flavored Markdown table."""
+        match_info = match_info or {}
+        opp = match_info.get("opponent", "Gegner")
+        spt = match_info.get("spt", "-")
+        date = match_info.get("date", "")
+        venue = match_info.get("venue", "")
+
+        tot = box.get("team_totals", {})
+        ctrl = box.get("control", {})
+
+        def pct(val):
+            return f"{round(val * 100, 1):.1f}%" if val is not None else "-"
+
+        md = [
+            f"# 🏀 SB Uffenheim Herren - Spielbericht SpT {spt}",
+            "",
+            f"**Gegner:** {opp} | **Datum:** {date} | **Ort:** {venue}",
+            f"**Ergebnis:** SB Uffenheim **{tot.get('pts', 0)}** Punkte",
+            f"> Status: {ctrl.get('message', '')}",
+            "",
+            "## 📊 Boxscore",
+            "",
+            "| Nr | Name | Min | PTS | 2P | 3P | FG | FT | REB (O/D) | AS | ST | BL | TO | FZ | PF | EFF | +/- |",
+            "|:--:|:-----|:---:|:---:|:--:|:--:|:--:|:--:|:---------:|:--:|:--:|:--:|:--:|:--:|:--:|:---:|:---:|",
+        ]
+
+        for p in box.get("players", []):
+            eff = (p.get("pts", 0) + p.get("Reb", 0) + p.get("AS", 0) + p.get("ST", 0) + p.get("BL", 0)) - (
+                (p.get("FG_V", 0) - p.get("FG_T", 0)) + (p.get("FW_V", 0) - p.get("FW_T", 0)) + p.get("TO", 0)
+            )
+            pm = p.get("plus_minus", 0)
+            pm_str = f"+{pm}" if pm > 0 else str(pm)
+            md.append(
+                f"| #{p.get('jersey', '')} | {p.get('name', '')} | {p.get('min_formatted', '00:00')} | "
+                f"**{p.get('pts', 0)}** | {p.get('2P_T', 0)}/{p.get('2P_V', 0)} ({pct(p.get('2P_PCT'))}) | "
+                f"{p.get('3P_T', 0)}/{p.get('3P_V', 0)} ({pct(p.get('3P_PCT'))}) | "
+                f"{p.get('FG_T', 0)}/{p.get('FG_V', 0)} ({pct(p.get('FG_PCT'))}) | "
+                f"{p.get('FW_T', 0)}/{p.get('FW_V', 0)} ({pct(p.get('FW_PCT'))}) | "
+                f"{p.get('Reb', 0)} ({p.get('OR', 0)}/{p.get('DR', 0)}) | "
+                f"{p.get('AS', 0)} | {p.get('ST', 0)} | {p.get('BL', 0)} | {p.get('TO', 0)} | "
+                f"{p.get('fouls_drawn', 0)} | {p.get('PF', 0)} | **{eff}** | {pm_str} |"
+            )
+
+        tot_eff = (tot.get("pts", 0) + tot.get("Reb", 0) + tot.get("AS", 0) + tot.get("ST", 0) + tot.get("BL", 0)) - (
+            (tot.get("FG_V", 0) - tot.get("FG_T", 0)) + (tot.get("FW_V", 0) - tot.get("FW_T", 0)) + tot.get("TO", 0)
+        )
+        md.append(
+            f"| **TOTAL** | **Team-Summe** | **{tot.get('min_formatted', '00:00')}** | "
+            f"**{tot.get('pts', 0)}** | **{tot.get('2P_T', 0)}/{tot.get('2P_V', 0)} ({pct(tot.get('2P_PCT'))})** | "
+            f"**{tot.get('3P_T', 0)}/{tot.get('3P_V', 0)} ({pct(tot.get('3P_PCT'))})** | "
+            f"**{tot.get('FG_T', 0)}/{tot.get('FG_V', 0)} ({pct(tot.get('FG_PCT'))})** | "
+            f"**{tot.get('FW_T', 0)}/{tot.get('FW_V', 0)} ({pct(tot.get('FW_PCT'))})** | "
+            f"**{tot.get('Reb', 0)} ({tot.get('OR', 0)}/{tot.get('DR', 0)})** | "
+            f"**{tot.get('AS', 0)}** | **{tot.get('ST', 0)}** | **{tot.get('BL', 0)}** | **{tot.get('TO', 0)}** | "
+            f"**{tot.get('fouls_drawn', 0)}** | **{tot.get('PF', 0)}** | **{tot_eff}** | **{tot.get('plus_minus', 0)}** |"
+        )
+
+        md.append("")
+        md.append("### 📈 Team-Wurfquoten & Advanced Metrics")
+        md.append(f"* **Feldwurfquote (FG%):** {pct(tot.get('FG_PCT'))}")
+        md.append(f"* **Effektive Wurfquote (eFG%):** {pct(tot.get('efg_pct'))}")
+        md.append(f"* **True Shooting (TS%):** {pct(tot.get('ts_pct'))}")
+        md.append(f"* **Assist-to-Turnover Ratio:** {tot.get('ast_to', '-')}")
+        md.append("")
+
+        return "\n".join(md)

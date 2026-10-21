@@ -131,3 +131,30 @@ def test_aggregate_protocol_variante_b():
     assert box["team_totals"]["pts"] == 2
     assert box["team_totals"]["OR"] == 1
     assert box["team_totals"]["TO"] == 1
+
+
+def test_export_boxscore_csv():
+    roster = [{"jersey": "20", "name": "Roman Blank"}]
+    data = {"20": {"2T": 5, "2V": 5, "3T": 2, "3V": 2, "FT": 2, "FV": 0, "OR": 1, "DR": 5, "AS": 4, "ST": 2, "BL": 1, "TO": 3, "min": "35:00", "PF": 2}}
+    box = BoxscoreCalculator.calculate_boxscore(roster, data, target_sbu_score=18)
+
+    csv_data = BoxscoreCalculator.export_boxscore_csv(box)
+    assert csv_data.startswith("\ufeff") # BOM
+    assert "Roman Blank" in csv_data
+    assert "20" in csv_data
+    assert "GESAMT" in csv_data
+    assert "18" in csv_data
+
+
+def test_export_boxscore_markdown():
+    roster = [{"jersey": "20", "name": "Roman Blank"}]
+    data = {"20": {"2T": 5, "2V": 5, "3T": 2, "3V": 2, "FT": 2, "FV": 0, "OR": 1, "DR": 5, "AS": 4, "ST": 2, "BL": 1, "TO": 3, "min": "35:00", "PF": 2}}
+    box = BoxscoreCalculator.calculate_boxscore(roster, data, target_sbu_score=18)
+    match_info = {"spt": 2, "opponent": "SG Oerlenbach/Ebenhausen 2", "date": "17.10.2026", "venue": "Halle"}
+
+    md_data = BoxscoreCalculator.export_boxscore_markdown(box, match_info)
+    assert "# 🏀 SB Uffenheim Herren - Spielbericht SpT 2" in md_data
+    assert "SG Oerlenbach/Ebenhausen 2" in md_data
+    assert "| #20 | Roman Blank |" in md_data
+    assert "| **TOTAL** | **Team-Summe** |" in md_data
+    assert "Feldwurfquote (FG%):" in md_data

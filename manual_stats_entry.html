@@ -152,8 +152,8 @@
                 <a href="./viewer.html" target="_blank" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5" title="3D Biomechanik & Court Visualizer">
                     <span>🎥</span> <span>3D-Viewer</span>
                 </a>
-                <button onclick="exportDataJSON()" title="Als JSON sichern" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">
-                    💾 Export
+                <button onclick="openExportModal()" title="Daten als Excel (.xlsx), Markdown (.md) oder CSV (.csv) herunterladen" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-950 to-blue-950 hover:from-cyan-900 hover:to-blue-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1.5 shadow-sm">
+                    <span>📥</span> <span>Download & Export</span>
                 </button>
                 <button onclick="openScoresheetModal()" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition flex items-center gap-1.5" title="Offiziellen DBB-Spielbericht (Excel, JSON oder Foto-Scan) laden & abgleichen">
                     <span>📄</span> <span>Spielbericht</span>
@@ -461,9 +461,17 @@
                             <span>📜 Zeitstempel-Protokoll</span>
                             <span class="text-[10px] text-slate-400">(Klick auf Zeitstempel springt im Video)</span>
                         </h3>
-                        <button onclick="clearProtocolConfirm()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold">
-                            🗑️ Protokoll leeren
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="downloadExcelPlayByPlay()" title="Play-by-Play als Excel herunterladen" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition flex items-center gap-1">
+                                <span>📊</span> <span>Excel</span>
+                            </button>
+                            <button onclick="downloadPlayByPlayCSV()" title="Play-by-Play als CSV herunterladen" class="px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1">
+                                <span>📑</span> <span>CSV</span>
+                            </button>
+                            <button onclick="clearProtocolConfirm()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold ml-1">
+                                🗑️ Leeren
+                            </button>
+                        </div>
                     </div>
 
                     <div class="max-h-[380px] overflow-y-auto">
@@ -502,8 +510,22 @@
                         <h2 class="font-extrabold text-white text-base">📊 Offizieller DBB Boxscore (Live berechnet)</h2>
                         <p class="text-xs text-slate-400">Automatische Aggregation aller Würfe, Rebounds, Turnovers und Fouls.</p>
                     </div>
-                    <div id="boxscore-analytics-pills" class="flex items-center flex-wrap gap-2 text-xs">
-                        <!-- Analytic Badges -->
+                    <div class="flex items-center flex-wrap gap-2 text-xs">
+                        <div id="boxscore-analytics-pills" class="flex items-center flex-wrap gap-2 text-xs">
+                            <!-- Analytic Badges -->
+                        </div>
+                        <div class="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 ml-auto">
+                            <span class="text-[10px] uppercase font-bold text-slate-500 px-1">Export:</span>
+                            <button onclick="downloadExcelBoxscore()" title="Boxscore als Excel herunterladen" class="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition flex items-center gap-1">
+                                <span>📊</span> <span>Excel</span>
+                            </button>
+                            <button onclick="downloadMarkdownReport()" title="Spielbericht als Markdown (.md) herunterladen" class="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1">
+                                <span>📝</span> <span>MD</span>
+                            </button>
+                            <button onclick="downloadBoxscoreCSV()" title="Boxscore als CSV herunterladen" class="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1">
+                                <span>📑</span> <span>CSV</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -572,7 +594,20 @@
                         <h2 class="font-extrabold text-white text-base">📅 Spielübersicht Herren 2026/27</h2>
                         <p class="text-xs text-slate-400">Alle 14 Spieltage der UFR Bezirksklasse Herren Ost</p>
                     </div>
-                    <div id="season-record-badges" class="flex items-center gap-2 text-xs"></div>
+                    <div class="flex items-center gap-3">
+                        <div id="season-record-badges" class="flex items-center gap-2 text-xs"></div>
+                        <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                            <button onclick="downloadExcelWorkbook()" title="Komplette Saison als Excel herunterladen" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition flex items-center gap-1">
+                                <span>📊</span> <span>Excel</span>
+                            </button>
+                            <button onclick="downloadMarkdownSeasonReport()" title="Saisonbericht als Markdown herunterladen" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1">
+                                <span>📝</span> <span>MD</span>
+                            </button>
+                            <button onclick="downloadScheduleCSV()" title="Spielplan als CSV herunterladen" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1">
+                                <span>📅</span> <span>Spielplan CSV</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
@@ -596,9 +631,22 @@
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <div class="p-4 bg-slate-900/90 border-b border-slate-800">
-                    <h2 class="font-extrabold text-white text-base">📈 Kumulierte Saisonstatistik 2026/27</h2>
-                    <p class="text-xs text-slate-400">Summen, Schnitte und Pro-40-Werte über alle Spieltage</p>
+                <div class="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-extrabold text-white text-base">📈 Kumulierte Saisonstatistik 2026/27</h2>
+                        <p class="text-xs text-slate-400">Summen, Schnitte und Pro-40-Werte über alle Spieltage</p>
+                    </div>
+                    <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button onclick="downloadExcelSeason()" title="Saison-Spielerstatistik als Excel herunterladen" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 transition flex items-center gap-1">
+                            <span>📊</span> <span>Excel</span>
+                        </button>
+                        <button onclick="downloadMarkdownSeasonReport()" title="Saisonbericht als Markdown herunterladen" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1">
+                            <span>📝</span> <span>MD</span>
+                        </button>
+                        <button onclick="downloadSeasonStatsCSV()" title="Kumulierte Spielerstatistik als CSV herunterladen" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1">
+                            <span>📑</span> <span>CSV</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
@@ -866,6 +914,166 @@
                         ✅ Für aktuellen Spieltag anwenden
                     </button>
                 </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: DOWNLOAD & EXPORT CENTER (EXCEL, MD, CSV, JSON) -->
+    <!-- ============================================================== -->
+    <div id="export-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-700 text-cyan-300 flex items-center justify-center text-xl shadow-md shadow-cyan-900/30">
+                        📥
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-white text-base">Daten-Download & Export Center</h3>
+                        <p class="text-xs text-slate-400">Offizielle DBB Match- & Saisondaten herunterladen</p>
+                    </div>
+                </div>
+                <button onclick="closeExportModal()" class="text-slate-400 hover:text-white font-bold text-xl p-1 leading-none">&times;</button>
+            </div>
+
+            <!-- Active Match Context Banner -->
+            <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+                <div>
+                    <span class="text-slate-400">Aktueller Spieltag:</span>
+                    <strong class="text-cyan-400 ml-1.5" id="export-match-context-title">SpT 2: SB Uffenheim vs. SG Oerlenbach/Ebenhausen 2</strong>
+                </div>
+                <span class="px-2.5 py-0.5 rounded text-[11px] bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold" id="export-match-score-badge">55 : 49</span>
+            </div>
+
+            <!-- Format Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+
+                <!-- CARD 1: EXCEL (.XLSX) -->
+                <div class="bg-slate-950/90 border border-emerald-900/50 hover:border-emerald-700/80 rounded-xl p-4 space-y-3 transition group">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">📊</span>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">Microsoft Excel</h4>
+                                <span class="text-[10px] text-emerald-400 font-mono font-semibold">.XLSX ARBEITSMAPPE</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Empfohlen</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Mehrteiliges Workbook mit 4 Tabs: Boxscore, Play-by-Play, kumulierte Saisonstatistik & Spielplan.
+                    </p>
+                    <div class="space-y-1.5 pt-1">
+                        <button onclick="downloadExcelWorkbook()" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold text-xs transition shadow-md shadow-emerald-950 flex items-center justify-center gap-1.5">
+                            <span>📥</span> <span>Komplette Arbeitsmappe (.xlsx)</span>
+                        </button>
+                        <div class="flex items-center gap-1 pt-1">
+                            <button onclick="downloadExcelBoxscore()" class="flex-1 py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold border border-slate-700">
+                                Nur Boxscore
+                            </button>
+                            <button onclick="downloadExcelPlayByPlay()" class="flex-1 py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold border border-slate-700">
+                                Play-by-Play
+                            </button>
+                            <button onclick="downloadExcelSeason()" class="flex-1 py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold border border-slate-700">
+                                Saison
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: MARKDOWN (.MD) -->
+                <div class="bg-slate-950/90 border border-cyan-900/50 hover:border-cyan-700/80 rounded-xl p-4 space-y-3 transition group">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">📝</span>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">Markdown Report</h4>
+                                <span class="text-[10px] text-cyan-400 font-mono font-semibold">.MD DOKUMENT</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">GitHub Ready</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Vollständiger Spielbericht mit sauberen Tabellen, Quoten, Match-Leadern und Chronologie für GitHub oder Readmes.
+                    </p>
+                    <div class="space-y-1.5 pt-1">
+                        <button onclick="downloadMarkdownReport()" class="w-full py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs transition shadow-md shadow-cyan-950 flex items-center justify-center gap-1.5">
+                            <span>📥</span> <span>Match-Report (.md) herunterladen</span>
+                        </button>
+                        <div class="flex items-center gap-1 pt-1">
+                            <button onclick="downloadMarkdownSeasonReport()" class="flex-1 py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold border border-slate-700">
+                                Saison-Report (.md)
+                            </button>
+                            <button onclick="copyMarkdownToClipboard()" id="btn-copy-md" class="flex-1 py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 flex items-center justify-center gap-1">
+                                <span>📋</span> <span id="copy-md-text">Kopieren</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: CSV TABELLEN (.CSV) -->
+                <div class="bg-slate-950/90 border border-slate-800 hover:border-slate-700 rounded-xl p-4 space-y-3 transition">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">📑</span>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">CSV Tabellen</h4>
+                                <span class="text-[10px] text-slate-400 font-mono font-semibold">.CSV (UTF-8 BOM)</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">Excel-Kompatibel</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Strukturierte Tabellen (Semikolon-separiert) für den direkten Import in Microsoft Excel, Python, Pandas oder Datenbanken.
+                    </p>
+                    <div class="grid grid-cols-2 gap-1.5 pt-1">
+                        <button onclick="downloadBoxscoreCSV()" class="py-1.5 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 text-left">
+                            📑 Boxscore (.csv)
+                        </button>
+                        <button onclick="downloadPlayByPlayCSV()" class="py-1.5 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 text-left">
+                            📜 Play-by-Play (.csv)
+                        </button>
+                        <button onclick="downloadSeasonStatsCSV()" class="py-1.5 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 text-left">
+                            📈 Saisonstatistik (.csv)
+                        </button>
+                        <button onclick="downloadScheduleCSV()" class="py-1.5 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 text-left">
+                            📅 Spielplan (.csv)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CARD 4: JSON ROHDATEN (.JSON) -->
+                <div class="bg-slate-950/90 border border-slate-800 hover:border-slate-700 rounded-xl p-4 space-y-3 transition">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">⚙️</span>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">JSON Rohdaten</h4>
+                                <span class="text-[10px] text-amber-400 font-mono font-semibold">.JSON BACKUP</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800">State-Vollbackup</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Sichert den gesamten Zustand der Web-App (Kader, alle Spieltage, Protokolle, Scores) als JSON-Datei.
+                    </p>
+                    <div class="pt-1">
+                        <button onclick="exportDataJSON()" class="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs transition border border-slate-700 flex items-center justify-center gap-1.5">
+                            <span>💾</span> <span>JSON-Backup herunterladen</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-end">
+                <button type="button" onclick="closeExportModal()" class="px-4 py-2 rounded-xl text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold">
+                    Schließen
+                </button>
             </div>
 
         </div>
@@ -1468,6 +1676,7 @@
                     min: "00:00", pf: 0, pm: 0
                 };
                 if (baseApp[j]) Object.assign(pInputs[j], baseApp[j]);
+                if (mData.sums && mData.sums[j]) Object.assign(pInputs[j], mData.sums[j]);
             });
 
             mData.protocol.forEach(item => {
@@ -1829,7 +2038,748 @@
             renderActionPlayerPills();
             renderProtocolTable();
             renderBoxscore();
+            renderSeason();
         }
+
+        // ==============================================================
+        // 12. CUMULATIVE SEASON STATS & SEASON RENDERER
+        // ==============================================================
+        function calculateSeasonStats() {
+            let pTotals = {};
+            state.roster.forEach(p => {
+                const j = String(p.jersey);
+                pTotals[j] = {
+                    jersey: j,
+                    name: p.name,
+                    gp: 0,
+                    min_sec: 0,
+                    pts: 0,
+                    fg2m: 0, fg2a: 0,
+                    fg3m: 0, fg3a: 0,
+                    fgm: 0, fga: 0,
+                    ftm: 0, fta: 0,
+                    oreb: 0, dreb: 0, reb: 0,
+                    ast: 0, stl: 0, blk: 0, to: 0,
+                    fouls_drawn: 0, pf: 0
+                };
+            });
+
+            let gamesPlayed = 0;
+            let wins = 0;
+            let losses = 0;
+            let teamPts = 0;
+            let oppPts = 0;
+
+            state.schedule.forEach(s => {
+                const mData = state.matches[s.spt];
+                if (!mData) return;
+                const box = calculateBoxscore(s.spt);
+                const hasScore = (mData.score_sbu !== null && mData.score_sbu !== undefined);
+                const hasBoxData = box.totals.pts > 0 || box.totals.played > 0;
+
+                if (hasScore || hasBoxData) {
+                    gamesPlayed++;
+                    const sbuScore = (mData.score_sbu !== null && mData.score_sbu !== undefined) ? mData.score_sbu : box.totals.pts;
+                    const oppScore = (mData.score_opp !== null && mData.score_opp !== undefined) ? mData.score_opp : (s.opp_score || 0);
+
+                    teamPts += sbuScore;
+                    oppPts += oppScore;
+                    if (sbuScore > oppScore) wins++;
+                    else if (sbuScore < oppScore) losses++;
+
+                    box.lines.forEach(l => {
+                        const j = String(l.jersey);
+                        if (!pTotals[j]) {
+                            pTotals[j] = {
+                                jersey: j, name: l.name, gp: 0, min_sec: 0, pts: 0,
+                                fg2m: 0, fg2a: 0, fg3m: 0, fg3a: 0, fgm: 0, fga: 0, ftm: 0, fta: 0,
+                                oreb: 0, dreb: 0, reb: 0, ast: 0, stl: 0, blk: 0, to: 0,
+                                fouls_drawn: 0, pf: 0
+                            };
+                        }
+                        if (l.played) {
+                            pTotals[j].gp++;
+                            pTotals[j].min_sec += l.min_sec;
+                            pTotals[j].pts += l.pts;
+                            pTotals[j].fg2m += l.fg2m;
+                            pTotals[j].fg2a += l.fg2a;
+                            pTotals[j].fg3m += l.fg3m;
+                            pTotals[j].fg3a += l.fg3a;
+                            pTotals[j].fgm += l.fgm;
+                            pTotals[j].fga += l.fga;
+                            pTotals[j].ftm += l.ftm;
+                            pTotals[j].fta += l.fta;
+                            pTotals[j].oreb += l.oreb;
+                            pTotals[j].dreb += l.dreb;
+                            pTotals[j].reb += l.reb;
+                            pTotals[j].ast += l.ast;
+                            pTotals[j].stl += l.stl;
+                            pTotals[j].blk += l.blk;
+                            pTotals[j].to += l.to;
+                            pTotals[j].fouls_drawn += l.fouls_drawn;
+                            pTotals[j].pf += l.pf;
+                        }
+                    });
+                }
+            });
+
+            let players = Object.values(pTotals).map(p => {
+                const ppg = p.gp > 0 ? (p.pts / p.gp) : 0;
+                const rpg = p.gp > 0 ? (p.reb / p.gp) : 0;
+                const apg = p.gp > 0 ? (p.ast / p.gp) : 0;
+                const spg = p.gp > 0 ? (p.stl / p.gp) : 0;
+                const bpg = p.gp > 0 ? (p.blk / p.gp) : 0;
+                const topg = p.gp > 0 ? (p.to / p.gp) : 0;
+                const fg2_pct = p.fg2a > 0 ? (p.fg2m / p.fg2a) : null;
+                const fg3_pct = p.fg3a > 0 ? (p.fg3m / p.fg3a) : null;
+                const fg_pct = p.fga > 0 ? (p.fgm / p.fga) : null;
+                const ft_pct = p.fta > 0 ? (p.ftm / p.fta) : null;
+                const efg = p.fga > 0 ? ((p.fgm + 0.5 * p.fg3m) / p.fga) : null;
+                const denom_ts = 2 * (p.fga + 0.44 * p.fta);
+                const ts = denom_ts > 0 ? (p.pts / denom_ts) : null;
+                const ast_to = p.to > 0 ? (p.ast / p.to) : (p.ast > 0 ? p.ast : null);
+
+                const m_min = Math.floor(p.min_sec / 60);
+                const s_sec = p.min_sec % 60;
+                const min_str = `${String(m_min).padStart(2,'0')}:${String(s_sec).padStart(2,'0')}`;
+                const totalMinutes = p.min_sec / 60;
+                const pts_40 = totalMinutes > 0 ? ((p.pts / totalMinutes) * 40) : null;
+                const reb_40 = totalMinutes > 0 ? ((p.reb / totalMinutes) * 40) : null;
+
+                return {
+                    ...p, min_str, ppg, rpg, apg, spg, bpg, topg,
+                    fg2_pct, fg3_pct, fg_pct, ft_pct, efg, ts, ast_to, pts_40, reb_40
+                };
+            });
+
+            // Sort players by total points descending
+            players.sort((a, b) => b.pts - a.pts);
+
+            return {
+                players, gamesPlayed, wins, losses, teamPts, oppPts
+            };
+        }
+
+        function renderSeason() {
+            const seasonData = calculateSeasonStats();
+
+            // 1. Record Badges
+            const badgeContainer = document.getElementById('season-record-badges');
+            if (badgeContainer) {
+                const diff = seasonData.teamPts - seasonData.oppPts;
+                badgeContainer.innerHTML = `
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
+                        Bilanz: ${seasonData.wins} - ${seasonData.losses}
+                    </span>
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+                        Punkte: <strong class="text-cyan-400">${seasonData.teamPts}:${seasonData.oppPts}</strong> (${diff >= 0 ? '+' : ''}${diff})
+                    </span>
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+                        Spiele: <strong class="text-white">${seasonData.gamesPlayed}</strong> / 14
+                    </span>
+                `;
+            }
+
+            // 2. Season Schedule Table Body
+            const schedBody = document.getElementById('season-schedule-body');
+            if (schedBody) {
+                schedBody.innerHTML = state.schedule.map(s => {
+                    const mData = state.matches[s.spt] || {};
+                    const box = calculateBoxscore(s.spt);
+                    const hasScore = mData.score_sbu !== null && mData.score_sbu !== undefined;
+                    const playedLines = box.lines.filter(l => l.played);
+                    const topScorer = playedLines.length > 0 ? [...playedLines].sort((a,b) => b.pts - a.pts)[0] : null;
+                    const topReb = playedLines.length > 0 ? [...playedLines].sort((a,b) => b.reb - a.reb)[0] : null;
+                    const sbuSc = hasScore ? mData.score_sbu : (s.sbu !== null ? s.sbu : null);
+                    const oppSc = (mData.score_opp !== null && mData.score_opp !== undefined) ? mData.score_opp : (s.opp_score !== null ? s.opp_score : null);
+
+                    let ergDisplay = '<span class="text-slate-500">-</span>';
+                    let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">Geplant</span>';
+
+                    if (sbuSc !== null && oppSc !== null) {
+                        const won = sbuSc > oppSc;
+                        ergDisplay = `<span class="font-bold ${won ? 'text-emerald-400' : 'text-rose-400'}">${sbuSc} : ${oppSc}</span>`;
+                        statusBadge = won ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800">Sieg</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-300 border border-rose-800">Niederlage</span>';
+                    }
+
+                    const pctFmt = v => v !== null ? `${(v * 100).toFixed(1)}%` : '-';
+
+                    return `
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="p-2.5 text-center font-bold text-cyan-400">SpT ${s.spt}</td>
+                            <td class="p-2.5 text-slate-300">${s.date}</td>
+                            <td class="p-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] ${s.ha === 'Heim' ? 'bg-cyan-950 text-cyan-300' : 'bg-slate-800 text-slate-400'}">${s.ha}</span></td>
+                            <td class="p-2.5 font-medium text-white">${s.opp}</td>
+                            <td class="p-2.5 text-center">${ergDisplay}</td>
+                            <td class="p-2.5 text-slate-300">${topScorer ? `#${topScorer.jersey} ${topScorer.name.split(' ')[0]} (${topScorer.pts})` : '-'}</td>
+                            <td class="p-2.5 text-slate-300">${topReb ? `#${topReb.jersey} ${topReb.name.split(' ')[0]} (${topReb.reb})` : '-'}</td>
+                            <td class="p-2.5 text-center text-slate-300 font-mono">${pctFmt(box.totals.fg_pct)}</td>
+                            <td class="p-2.5 text-center">${statusBadge}</td>
+                            <td class="p-2.5 text-center">
+                                <button onclick="selectMatch(${s.spt}); switchView('video_split');" class="px-2 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 text-[11px] font-semibold transition">
+                                    Öffnen
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // 3. Season Players Cumulative Table Body
+            const playerBody = document.getElementById('season-players-body');
+            if (playerBody) {
+                const pctFmt = v => v !== null ? `${(v * 100).toFixed(1)}%` : '-';
+                const numFmt = v => (v !== null && v !== undefined) ? v.toFixed(1) : '-';
+
+                playerBody.innerHTML = seasonData.players.map(p => `
+                    <tr class="hover:bg-slate-800/40 transition ${p.gp > 0 ? '' : 'opacity-40'}">
+                        <td class="p-2 text-center font-bold text-cyan-400">#${p.jersey}</td>
+                        <td class="p-2 font-medium text-white">${p.name}</td>
+                        <td class="p-2 text-center font-bold">${p.gp}</td>
+                        <td class="p-2 text-center font-black text-cyan-400 text-sm">${p.pts}</td>
+                        <td class="p-2 text-center font-bold text-cyan-300">${numFmt(p.ppg)}</td>
+                        <td class="p-2 text-center">${p.fg2m}/${p.fg2a} <span class="text-slate-500 text-[10px]">(${pctFmt(p.fg2_pct)})</span></td>
+                        <td class="p-2 text-center">${p.fg3m}/${p.fg3a} <span class="text-slate-500 text-[10px]">(${pctFmt(p.fg3_pct)})</span></td>
+                        <td class="p-2 text-center font-bold text-white bg-slate-800/30">${p.fgm}/${p.fga} <span class="text-cyan-400 text-[10px]">(${pctFmt(p.fg_pct)})</span></td>
+                        <td class="p-2 text-center">${p.ftm}/${p.fta} <span class="text-slate-500 text-[10px]">(${pctFmt(p.ft_pct)})</span></td>
+                        <td class="p-2 text-center font-bold text-sky-400">${p.reb}</td>
+                        <td class="p-2 text-center font-bold text-sky-300">${numFmt(p.rpg)}</td>
+                        <td class="p-2 text-center text-indigo-300">${p.ast}</td>
+                        <td class="p-2 text-center text-indigo-300">${p.stl}</td>
+                        <td class="p-2 text-center text-indigo-300">${p.blk}</td>
+                        <td class="p-2 text-center text-rose-400">${p.to}</td>
+                        <td class="p-2 text-center">${p.ast_to !== null ? numFmt(p.ast_to) : '-'}</td>
+                        <td class="p-2 text-center text-amber-300">${p.fouls_drawn}</td>
+                        <td class="p-2 text-center font-mono text-slate-300">${pctFmt(p.efg)}</td>
+                        <td class="p-2 text-center font-mono text-slate-300">${pctFmt(p.ts)}</td>
+                        <td class="p-2 text-center font-mono text-slate-300">${p.min_str}</td>
+                        <td class="p-2 text-center font-mono text-cyan-300">${numFmt(p.pts_40)}</td>
+                        <td class="p-2 text-center font-mono text-sky-300">${numFmt(p.reb_40)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // ==============================================================
+        // 13. EXPORT & DOWNLOAD ENGINE (EXCEL, MD, CSV)
+        // ==============================================================
+        function openExportModal() {
+            const modal = document.getElementById('export-modal');
+            if (!modal) return;
+            const m = state.schedule.find(s => s.spt === state.currentMatchId) || { spt: state.currentMatchId, opp: 'Gegner', date: '' };
+            const mData = state.matches[state.currentMatchId] || {};
+            const titleEl = document.getElementById('export-match-context-title');
+            if (titleEl) {
+                titleEl.innerText = `SpT ${m.spt}: SB Uffenheim vs. ${m.opp} (${m.date})`;
+            }
+            const badgeEl = document.getElementById('export-match-score-badge');
+            if (badgeEl) {
+                if (mData.score_sbu !== null && mData.score_sbu !== undefined) {
+                    badgeEl.innerText = `${mData.score_sbu} : ${mData.score_opp !== null ? mData.score_opp : '-'}`;
+                    badgeEl.classList.remove('hidden');
+                } else {
+                    badgeEl.classList.add('hidden');
+                }
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('export-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        function arrayToCSV(rows, delimiter = ";") {
+            return "\uFEFF" + rows.map(r => 
+                r.map(val => {
+                    if (val === null || val === undefined) return "";
+                    let s = String(val);
+                    if (s.includes('"') || s.includes(delimiter) || s.includes('\n') || s.includes('\r')) {
+                        s = '"' + s.replace(/"/g, '""') + '"';
+                    }
+                    return s;
+                }).join(delimiter)
+            ).join("\r\n");
+        }
+
+        // --- EXCEL (.XLSX) EXPORTS VIA SHEETJS ---
+        function downloadExcelWorkbook(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const m = state.schedule.find(s => s.spt === matchId) || { spt: matchId, opp: 'Gegner', date: '', ha: 'Heim', venue: '' };
+            const mData = state.matches[matchId] || { protocol: [] };
+            const box = calculateBoxscore(matchId);
+
+            if (typeof XLSX === 'undefined') {
+                alert("SheetJS Excel-Bibliothek wird noch geladen. Bitte kurz warten...");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Boxscore
+            const boxRows = [
+                ["SB Uffenheim Herren - Spielbericht Boxscore"],
+                [`Spieltag: ${m.spt}`, `Gegner: ${m.opp}`, `Datum: ${m.date}`, `Heim/Auswärts: ${m.ha}`],
+                [`Endergebnis: SB Uffenheim ${box.totals.pts} : ${mData.score_opp !== null && mData.score_opp !== undefined ? mData.score_opp : '-'} ${m.opp}`],
+                [],
+                ["Nr", "Name", "Einsatz", "Minuten", "Punkte", "2P Treffer", "2P Versuche", "2P %", "3P Treffer", "3P Versuche", "3P %", "FG Treffer", "FG Versuche", "FG %", "FT Treffer", "FT Versuche", "FT %", "Off.-Reb", "Def.-Reb", "Rebounds Ges.", "Assists", "Steals", "Blocks", "Turnovers", "Fouls gez.", "Pers. Fouls", "EFF (Effizienz)", "+/-"]
+            ];
+
+            const pctNum = v => v !== null ? Number((v * 100).toFixed(1)) : "";
+
+            box.lines.forEach(l => {
+                const eff = (l.pts + l.reb + l.ast + l.stl + l.blk) - ((l.fga - l.fgm) + (l.fta - l.ftm) + l.to);
+                boxRows.push([
+                    Number(l.jersey) || l.jersey,
+                    l.name,
+                    l.played ? "Ja" : "Nein",
+                    l.min_str,
+                    l.pts,
+                    l.fg2m, l.fg2a, pctNum(l.fg2_pct),
+                    l.fg3m, l.fg3a, pctNum(l.fg3_pct),
+                    l.fgm, l.fga, pctNum(l.fg_pct),
+                    l.ftm, l.fta, pctNum(l.ft_pct),
+                    l.oreb, l.dreb, l.reb,
+                    l.ast, l.stl, l.blk, l.to,
+                    l.fouls_drawn, l.pf, eff, l.pm
+                ]);
+            });
+
+            const totEff = (box.totals.pts + box.totals.reb + box.totals.ast + box.totals.stl + box.totals.blk) - ((box.totals.fga - box.totals.fgm) + (box.totals.fta - box.totals.ftm) + box.totals.to);
+            boxRows.push([
+                "GESAMT",
+                "Team",
+                box.totals.played,
+                box.totals.min_str,
+                box.totals.pts,
+                box.totals.fg2m, box.totals.fg2a, pctNum(box.totals.fg2_pct),
+                box.totals.fg3m, box.totals.fg3a, pctNum(box.totals.fg3_pct),
+                box.totals.fgm, box.totals.fga, pctNum(box.totals.fg_pct),
+                box.totals.ftm, box.totals.fta, pctNum(box.totals.ft_pct),
+                box.totals.oreb, box.totals.dreb, box.totals.reb,
+                box.totals.ast, box.totals.stl, box.totals.blk, box.totals.to,
+                box.totals.fouls_drawn, box.totals.pf, totEff, box.totals.pm
+            ]);
+
+            const wsBox = XLSX.utils.aoa_to_sheet(boxRows);
+            XLSX.utils.book_append_sheet(wb, wsBox, `Boxscore_SpT${m.spt}`);
+
+            // Sheet 2: Play-by-Play (if protocol entries exist)
+            if (mData.protocol && mData.protocol.length > 0) {
+                const pbpRows = [
+                    ["SB Uffenheim Herren - Play-by-Play Ereignisprotokoll"],
+                    [`Spieltag ${m.spt} vs. ${m.opp}`, `Gesamte Aktionen: ${mData.protocol.length}`],
+                    [],
+                    ["#", "Zeitstempel", "Sekunden", "Trikot", "Spieler", "Code", "Aktion", "Punkte"]
+                ];
+                mData.protocol.forEach((it, idx) => {
+                    const p = state.roster.find(r => r.jersey === it.jersey) || { name: 'Unbekannt' };
+                    const act = ACTION_MAP[it.code] || { label: it.code, pts: 0 };
+                    const tStr = it.timestamp_str || (it.timestamp_s ? formatSecondsToTime(it.timestamp_s) : '-');
+                    pbpRows.push([
+                        idx + 1,
+                        tStr,
+                        it.timestamp_s !== undefined ? Number(it.timestamp_s.toFixed(1)) : "",
+                        Number(it.jersey) || it.jersey,
+                        p.name,
+                        it.code,
+                        act.label,
+                        act.pts
+                    ]);
+                });
+                const wsPbp = XLSX.utils.aoa_to_sheet(pbpRows);
+                XLSX.utils.book_append_sheet(wb, wsPbp, "Play_by_Play");
+            }
+
+            // Sheet 3: Kumulierte Saisonstatistik
+            const seasonData = calculateSeasonStats();
+            const sRows = [
+                ["SB Uffenheim Herren - Kumulierte Saisonstatistik 2026/27"],
+                [`Stand: ${new Date().toLocaleDateString('de-DE')} | Spiele absolviert: ${seasonData.gamesPlayed}`],
+                [],
+                ["Nr", "Name", "Spiele", "Minuten", "Punkte Ges.", "Punkte/Sp.", "2P Treffer", "2P Vers.", "2P %", "3P Treffer", "3P Vers.", "3P %", "FG Treffer", "FG Vers.", "FG %", "FT Treffer", "FT Vers.", "FT %", "Off.-Reb", "Def.-Reb", "Reb. Ges.", "Reb/Sp.", "Assists", "Steals", "Blocks", "Turnovers", "Fouls gez.", "Pers. Fouls", "eFG %", "TS %", "Pkt/40", "Reb/40"]
+            ];
+            seasonData.players.forEach(sp => {
+                const avgNum = v => (v !== null && v !== undefined) ? Number(v.toFixed(1)) : "";
+                sRows.push([
+                    Number(sp.jersey) || sp.jersey,
+                    sp.name,
+                    sp.gp,
+                    sp.min_str,
+                    sp.pts,
+                    avgNum(sp.ppg),
+                    sp.fg2m, sp.fg2a, pctNum(sp.fg2_pct),
+                    sp.fg3m, sp.fg3a, pctNum(sp.fg3_pct),
+                    sp.fgm, sp.fga, pctNum(sp.fg_pct),
+                    sp.ftm, sp.fta, pctNum(sp.ft_pct),
+                    sp.oreb, sp.dreb, sp.reb,
+                    avgNum(sp.rpg),
+                    sp.ast, sp.stl, sp.blk, sp.to,
+                    sp.fouls_drawn, sp.pf,
+                    pctNum(sp.efg), pctNum(sp.ts),
+                    avgNum(sp.pts_40), avgNum(sp.reb_40)
+                ]);
+            });
+            const wsSeason = XLSX.utils.aoa_to_sheet(sRows);
+            XLSX.utils.book_append_sheet(wb, wsSeason, "Saison_Statistik");
+
+            // Sheet 4: Spielplan & Termine
+            const schedRows = [
+                ["SB Uffenheim Herren - Spielplan & Ergebnisse 2026/27"],
+                ["UFR Bezirksklasse Herren Ost (Liganr. 25003)"],
+                [],
+                ["SpT", "Datum", "H/A", "Gegner", "Halle / Ort", "SBU", "Gegner", "Ergebnis", "Status"]
+            ];
+            state.schedule.forEach(s => {
+                const mD = state.matches[s.spt] || {};
+                const sbuSc = (mD.score_sbu !== null && mD.score_sbu !== undefined) ? mD.score_sbu : (s.sbu !== null ? s.sbu : "");
+                const oppSc = (mD.score_opp !== null && mD.score_opp !== undefined) ? mD.score_opp : (s.opp_score !== null ? s.opp_score : "");
+                let erg = "";
+                let stat = "Geplant";
+                if (sbuSc !== "" && oppSc !== "") {
+                    erg = `${sbuSc}:${oppSc}`;
+                    stat = sbuSc > oppSc ? "Sieg SBU" : (sbuSc < oppSc ? "Niederlage" : "Unentschieden");
+                }
+                schedRows.push([
+                    s.spt,
+                    s.date,
+                    s.ha,
+                    s.opp,
+                    s.venue,
+                    sbuSc,
+                    oppSc,
+                    erg,
+                    stat
+                ]);
+            });
+            const wsSched = XLSX.utils.aoa_to_sheet(schedRows);
+            XLSX.utils.book_append_sheet(wb, wsSched, "Spielplan");
+
+            XLSX.writeFile(wb, `sbu_basketball_match_spt${m.spt}_und_saison_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function downloadExcelBoxscore(matchId) {
+            matchId = matchId || state.currentMatchId;
+            downloadExcelWorkbook(matchId);
+        }
+
+        function downloadExcelPlayByPlay(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const m = state.schedule.find(s => s.spt === matchId) || { spt: matchId, opp: 'Gegner' };
+            const mData = state.matches[matchId] || { protocol: [] };
+
+            if (!mData.protocol || mData.protocol.length === 0) {
+                alert("Für diesen Spieltag sind noch keine Play-by-Play Aktionen protokolliert.");
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                alert("SheetJS wird geladen...");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const pbpRows = [
+                [`SB Uffenheim Herren - Play-by-Play SpT ${m.spt} vs. ${m.opp}`],
+                [`Gesamte Aktionen: ${mData.protocol.length}`],
+                [],
+                ["#", "Zeitstempel", "Sekunden", "Trikot", "Spieler", "Code", "Aktion", "Punkte"]
+            ];
+            mData.protocol.forEach((it, idx) => {
+                const p = state.roster.find(r => r.jersey === it.jersey) || { name: 'Unbekannt' };
+                const act = ACTION_MAP[it.code] || { label: it.code, pts: 0 };
+                const tStr = it.timestamp_str || (it.timestamp_s ? formatSecondsToTime(it.timestamp_s) : '-');
+                pbpRows.push([
+                    idx + 1,
+                    tStr,
+                    it.timestamp_s !== undefined ? Number(it.timestamp_s.toFixed(1)) : "",
+                    Number(it.jersey) || it.jersey,
+                    p.name,
+                    it.code,
+                    act.label,
+                    act.pts
+                ]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(pbpRows);
+            XLSX.utils.book_append_sheet(wb, ws, "Play_by_Play");
+            XLSX.writeFile(wb, `sbu_play_by_play_spt${m.spt}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function downloadExcelSeason() {
+            downloadExcelWorkbook(state.currentMatchId);
+        }
+
+        // --- MARKDOWN (.MD) EXPORTS ---
+        function generateMarkdownReport(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const m = state.schedule.find(s => s.spt === matchId) || { spt: matchId, opp: 'Gegner', date: '', venue: '', ha: 'Heim' };
+            const mData = state.matches[matchId] || { protocol: [] };
+            const box = calculateBoxscore(matchId);
+            const pct = v => v !== null ? `${(v * 100).toFixed(1)}%` : '-';
+            const effCalc = l => (l.pts + l.reb + l.ast + l.stl + l.blk) - ((l.fga - l.fgm) + (l.fta - l.ftm) + l.to);
+
+            let md = `# 🏀 SB Uffenheim Herren - Spielbericht SpT ${m.spt}\n\n`;
+            md += `* **Gegner:** ${m.opp} (${m.ha})\n`;
+            md += `* **Datum & Ort:** ${m.date} · ${m.venue}\n`;
+            md += `* **Endergebnis:** **SB Uffenheim ${box.totals.pts} : ${mData.score_opp !== null && mData.score_opp !== undefined ? mData.score_opp : '-'} ${m.opp}**\n`;
+            md += `> Status: ${box.control.msg}\n\n`;
+            md += `---\n\n`;
+
+            md += `## 📊 Boxscore (Offizielle DBB-Statistik)\n\n`;
+            md += `| Nr | Name | Ein | Min | PTS | 2P (M/A) | 2P % | 3P (M/A) | 3P % | FG (M/A) | FG % | FT (M/A) | FT % | REB (O/D) | AS | ST | BL | TO | FZ | PF | EFF | +/-\n`;
+            md += `|:--:|:-----|:---:|:---:|:---:|:--------:|:----:|:--------:|:----:|:--------:|:----:|:--------:|:----:|:---------:|:--:|:--:|:--:|:--:|:--:|:--:|:---:|:---:\n`;
+
+            box.lines.forEach(l => {
+                const eff = effCalc(l);
+                const pmStr = l.pm > 0 ? `+${l.pm}` : `${l.pm}`;
+                md += `| #${l.jersey} | ${l.name} | ${l.played ? '✓' : '-'} | ${l.min_str} | **${l.pts}** | ${l.fg2m}/${l.fg2a} | ${pct(l.fg2_pct)} | ${l.fg3m}/${l.fg3a} | ${pct(l.fg3_pct)} | ${l.fgm}/${l.fga} | ${pct(l.fg_pct)} | ${l.ftm}/${l.fta} | ${pct(l.ft_pct)} | **${l.reb}** (${l.oreb}/${l.dreb}) | ${l.ast} | ${l.stl} | ${l.blk} | ${l.to} | ${l.fouls_drawn} | ${l.pf} | **${eff}** | ${pmStr} |\n`;
+            });
+
+            const totEff = effCalc(box.totals);
+            md += `| **TOTAL** | **Team-Summe** | **${box.totals.played}** | **${box.totals.min_str}** | **${box.totals.pts}** | **${box.totals.fg2m}/${box.totals.fg2a}** | **${pct(box.totals.fg2_pct)}** | **${box.totals.fg3m}/${box.totals.fg3a}** | **${pct(box.totals.fg3_pct)}** | **${box.totals.fgm}/${box.totals.fga}** | **${pct(box.totals.fg_pct)}** | **${box.totals.ftm}/${box.totals.fta}** | **${pct(box.totals.ft_pct)}** | **${box.totals.reb}** (${box.totals.oreb}/${box.totals.dreb}) | **${box.totals.ast}** | **${box.totals.stl}** | **${box.totals.blk}** | **${box.totals.to}** | **${box.totals.fouls_drawn}** | **${box.totals.pf}** | **${totEff}** | **${box.totals.pm}** |\n\n`;
+
+            md += `### 📈 Advanced Metrics & Team-Quoten\n\n`;
+            md += `* **Feldwurfquote (FG%):** ${pct(box.totals.fg_pct)} (${box.totals.fgm}/${box.totals.fga})\n`;
+            md += `* **Effektive Wurfquote (eFG%):** ${pct(box.totals.efg)}\n`;
+            md += `* **True Shooting (TS%):** ${pct(box.totals.ts)}\n`;
+            md += `* **Assist-to-Turnover Ratio:** ${box.totals.ast_to !== null ? box.totals.ast_to.toFixed(2) : '-'}\n`;
+            md += `* **Rebounds (Offensiv / Defensiv):** ${box.totals.reb} (${box.totals.oreb} / ${box.totals.dreb})\n\n`;
+
+            // Match Leader
+            const playedLines = box.lines.filter(l => l.played);
+            if (playedLines.length > 0) {
+                const topScorer = [...playedLines].sort((a,b) => b.pts - a.pts)[0];
+                const topReb = [...playedLines].sort((a,b) => b.reb - a.reb)[0];
+                const topAst = [...playedLines].sort((a,b) => b.ast - a.ast)[0];
+                const topEff = [...playedLines].sort((a,b) => effCalc(b) - effCalc(a))[0];
+
+                md += `### 🌟 Match Leader\n\n`;
+                if (topScorer) md += `* 🎯 **Topscorer:** #${topScorer.jersey} ${topScorer.name} (**${topScorer.pts} Pkt**, ${topScorer.fgm}/${topScorer.fga} FG)\n`;
+                if (topReb) md += `* 🛡️ **Rebound Leader:** #${topReb.jersey} ${topReb.name} (**${topReb.reb} Reb**, ${topReb.oreb} OR / ${topReb.dreb} DR)\n`;
+                if (topAst && topAst.ast > 0) md += `* 🎯 **Assist Leader:** #${topAst.jersey} ${topAst.name} (**${topAst.ast} Assists**)\n`;
+                if (topEff) md += `* ⚡ **Höchste Effizienz (EFF):** #${topEff.jersey} ${topEff.name} (**EFF ${effCalc(topEff)}**)\n\n`;
+            }
+
+            // Play-by-Play if available
+            if (mData.protocol && mData.protocol.length > 0) {
+                md += `## 📜 Play-by-Play Protokoll (${mData.protocol.length} Aktionen)\n\n`;
+                md += `| # | Zeit | Trikot | Spieler | Aktion | Punkte |\n`;
+                md += `|:---:|:---:|:---:|:---|:---|:---:|\n`;
+                mData.protocol.forEach((it, idx) => {
+                    const p = state.roster.find(r => r.jersey === it.jersey) || { name: 'Unbekannt' };
+                    const act = ACTION_MAP[it.code] || { label: it.code, pts: 0 };
+                    const tStr = it.timestamp_str || (it.timestamp_s ? formatSecondsToTime(it.timestamp_s) : '-');
+                    md += `| ${idx + 1} | ${tStr} | #${it.jersey} | ${p.name} | ${act.label} | ${act.pts > 0 ? `+${act.pts}` : '-'} |\n`;
+                });
+                md += `\n`;
+            }
+
+            return md;
+        }
+
+        function downloadMarkdownReport(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const md = generateMarkdownReport(matchId);
+            downloadFile(md, `sbu_matchbericht_spt${matchId}_${new Date().toISOString().slice(0,10)}.md`, "text/markdown;charset=utf-8;");
+        }
+
+        function generateMarkdownSeasonReport() {
+            const seasonData = calculateSeasonStats();
+            const pct = v => v !== null ? `${(v * 100).toFixed(1)}%` : '-';
+            const numFmt = v => (v !== null && v !== undefined) ? v.toFixed(1) : '-';
+
+            let md = `# 🏆 SB Uffenheim Herren - Kumulierter Saisonbericht 2026/27\n\n`;
+            md += `* **Liga:** UFR Bezirksklasse Herren Ost (Liganr. 25003)\n`;
+            md += `* **Bilanz:** **${seasonData.wins} Siege - ${seasonData.losses} Niederlagen** (${seasonData.gamesPlayed} von 14 Spielen absolviert)\n`;
+            md += `* **Korbverhältnis:** **${seasonData.teamPts} : ${seasonData.oppPts}** (${seasonData.teamPts - seasonData.oppPts >= 0 ? '+' : ''}${seasonData.teamPts - seasonData.oppPts})\n\n`;
+            md += `---\n\n`;
+
+            md += `## 📈 Spieler-Statistiken (Kumuliert)\n\n`;
+            md += `| Nr | Name | Spiele | Min | PTS | P/Sp | 2P (M/A) | 3P (M/A) | FG % | FT (M/A) | REB | R/Sp | AS | ST | BL | TO | AS/TO | eFG % | TS % | P/40 | R/40 |\n`;
+            md += `|:--:|:-----|:------:|:---:|:---:|:----:|:--------:|:--------:|:----:|:--------:|:---:|:----:|:--:|:--:|:--:|:--:|:-----:|:-----:|:----:|:----:|:----:|\n`;
+
+            seasonData.players.forEach(p => {
+                md += `| #${p.jersey} | ${p.name} | ${p.gp} | ${p.min_str} | **${p.pts}** | ${numFmt(p.ppg)} | ${p.fg2m}/${p.fg2a} | ${p.fg3m}/${p.fg3a} | ${pct(p.fg_pct)} | ${p.ftm}/${p.fta} | **${p.reb}** | ${numFmt(p.rpg)} | ${p.ast} | ${p.stl} | ${p.blk} | ${p.to} | ${numFmt(p.ast_to)} | ${pct(p.efg)} | ${pct(p.ts)} | ${numFmt(p.pts_40)} | ${numFmt(p.reb_40)} |\n`;
+            });
+            md += `\n`;
+
+            md += `## 📅 Spielplan & Ergebnisse\n\n`;
+            md += `| SpT | Datum | H/A | Gegner | Ergebnis | Status |\n`;
+            md += `|:---:|:---:|:---:|:---|:---:|:---:|\n`;
+            state.schedule.forEach(s => {
+                const mD = state.matches[s.spt] || {};
+                const sbuSc = (mD.score_sbu !== null && mD.score_sbu !== undefined) ? mD.score_sbu : (s.sbu !== null ? s.sbu : "-");
+                const oppSc = (mD.score_opp !== null && mD.score_opp !== undefined) ? mD.score_opp : (s.opp_score !== null ? s.opp_score : "-");
+                const erg = (sbuSc !== "-" && oppSc !== "-") ? `${sbuSc} : ${oppSc}` : "ausstehend";
+                md += `| SpT ${s.spt} | ${s.date} | ${s.ha} | ${s.opp} | ${erg} | ${erg !== 'ausstehend' ? 'Gespielt' : 'Geplant'} |\n`;
+            });
+
+            return md;
+        }
+
+        function downloadMarkdownSeasonReport() {
+            const md = generateMarkdownSeasonReport();
+            downloadFile(md, `sbu_saisonbericht_2026_27_${new Date().toISOString().slice(0,10)}.md`, "text/markdown;charset=utf-8;");
+        }
+
+        function copyMarkdownToClipboard(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const md = generateMarkdownReport(matchId);
+            navigator.clipboard.writeText(md).then(() => {
+                const btn = document.getElementById('btn-copy-md');
+                const txt = document.getElementById('copy-md-text');
+                if (btn && txt) {
+                    txt.innerText = "✓ Kopiert!";
+                    btn.classList.add('bg-emerald-900', 'text-emerald-300');
+                    setTimeout(() => {
+                        txt.innerText = "Kopieren";
+                        btn.classList.remove('bg-emerald-900', 'text-emerald-300');
+                    }, 2000);
+                }
+            }).catch(err => {
+                alert("Fehler beim Kopieren: " + err);
+            });
+        }
+
+        // --- CSV (.CSV) EXPORTS (UTF-8 BOM FOR GERMAN EXCEL) ---
+        function downloadBoxscoreCSV(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const m = state.schedule.find(s => s.spt === matchId) || { spt: matchId, opp: 'Gegner' };
+            const box = calculateBoxscore(matchId);
+
+            const pctNum = v => v !== null ? `${(v * 100).toFixed(1)}%` : "-";
+
+            const rows = [
+                ["Nr", "Name", "Einsatz", "Minuten", "Punkte", "2P_Treffer", "2P_Versuche", "2P_Quote", "3P_Treffer", "3P_Versuche", "3P_Quote", "FG_Treffer", "FG_Versuche", "FG_Quote", "FT_Treffer", "FT_Versuche", "FT_Quote", "Off_Reb", "Def_Reb", "Rebounds_Ges", "Assists", "Steals", "Blocks", "Turnovers", "Fouls_gezogen", "Pers_Fouls", "EFF", "Plus_Minus"]
+            ];
+
+            box.lines.forEach(l => {
+                const eff = (l.pts + l.reb + l.ast + l.stl + l.blk) - ((l.fga - l.fgm) + (l.fta - l.ftm) + l.to);
+                rows.push([
+                    l.jersey, l.name, l.played ? "Ja" : "Nein", l.min_str, l.pts,
+                    l.fg2m, l.fg2a, pctNum(l.fg2_pct),
+                    l.fg3m, l.fg3a, pctNum(l.fg3_pct),
+                    l.fgm, l.fga, pctNum(l.fg_pct),
+                    l.ftm, l.fta, pctNum(l.ft_pct),
+                    l.oreb, l.dreb, l.reb,
+                    l.ast, l.stl, l.blk, l.to,
+                    l.fouls_drawn, l.pf, eff, l.pm
+                ]);
+            });
+
+            const totEff = (box.totals.pts + box.totals.reb + box.totals.ast + box.totals.stl + box.totals.blk) - ((box.totals.fga - box.totals.fgm) + (box.totals.fta - box.totals.ftm) + box.totals.to);
+            rows.push([
+                "GESAMT", "Team", box.totals.played, box.totals.min_str, box.totals.pts,
+                box.totals.fg2m, box.totals.fg2a, pctNum(box.totals.fg2_pct),
+                box.totals.fg3m, box.totals.fg3a, pctNum(box.totals.fg3_pct),
+                box.totals.fgm, box.totals.fga, pctNum(box.totals.fg_pct),
+                box.totals.ftm, box.totals.fta, pctNum(box.totals.ft_pct),
+                box.totals.oreb, box.totals.dreb, box.totals.reb,
+                box.totals.ast, box.totals.stl, box.totals.blk, box.totals.to,
+                box.totals.fouls_drawn, box.totals.pf, totEff, box.totals.pm
+            ]);
+
+            const csvStr = arrayToCSV(rows, ";");
+            downloadFile(csvStr, `sbu_boxscore_spt${m.spt}_${new Date().toISOString().slice(0,10)}.csv`, "text/csv;charset=utf-8;");
+        }
+
+        function downloadPlayByPlayCSV(matchId) {
+            matchId = matchId || state.currentMatchId;
+            const m = state.schedule.find(s => s.spt === matchId) || { spt: matchId, opp: 'Gegner' };
+            const mData = state.matches[matchId] || { protocol: [] };
+
+            if (!mData.protocol || mData.protocol.length === 0) {
+                alert("Für diesen Spieltag sind noch keine Play-by-Play Aktionen protokolliert.");
+                return;
+            }
+
+            const rows = [
+                ["#", "Zeitstempel", "Sekunden", "Trikot", "Spieler", "Code", "Aktion", "Punkte"]
+            ];
+            mData.protocol.forEach((it, idx) => {
+                const p = state.roster.find(r => r.jersey === it.jersey) || { name: 'Unbekannt' };
+                const act = ACTION_MAP[it.code] || { label: it.code, pts: 0 };
+                const tStr = it.timestamp_str || (it.timestamp_s ? formatSecondsToTime(it.timestamp_s) : '-');
+                rows.push([
+                    idx + 1,
+                    tStr,
+                    it.timestamp_s !== undefined ? it.timestamp_s.toFixed(1) : "",
+                    it.jersey,
+                    p.name,
+                    it.code,
+                    act.label,
+                    act.pts
+                ]);
+            });
+
+            const csvStr = arrayToCSV(rows, ";");
+            downloadFile(csvStr, `sbu_play_by_play_spt${m.spt}_${new Date().toISOString().slice(0,10)}.csv`, "text/csv;charset=utf-8;");
+        }
+
+        function downloadSeasonStatsCSV() {
+            const seasonData = calculateSeasonStats();
+            const pctNum = v => v !== null ? `${(v * 100).toFixed(1)}%` : "-";
+            const numFmt = v => (v !== null && v !== undefined) ? v.toFixed(1) : "-";
+
+            const rows = [
+                ["Nr", "Name", "Spiele", "Minuten", "Punkte_Gesamt", "Punkte_pro_Spiel", "2P_Treffer", "2P_Versuche", "2P_Quote", "3P_Treffer", "3P_Versuche", "3P_Quote", "FG_Treffer", "FG_Versuche", "FG_Quote", "FT_Treffer", "FT_Versuche", "FT_Quote", "Off_Reb", "Def_Reb", "Rebounds_Gesamt", "Reb_pro_Spiel", "Assists", "Steals", "Blocks", "Turnovers", "Fouls_gezogen", "Pers_Fouls", "eFG_Quote", "TS_Quote", "Punkte_pro_40", "Rebounds_pro_40"]
+            ];
+
+            seasonData.players.forEach(p => {
+                rows.push([
+                    p.jersey, p.name, p.gp, p.min_str, p.pts, numFmt(p.ppg),
+                    p.fg2m, p.fg2a, pctNum(p.fg2_pct),
+                    p.fg3m, p.fg3a, pctNum(p.fg3_pct),
+                    p.fgm, p.fga, pctNum(p.fg_pct),
+                    p.ftm, p.fta, pctNum(p.ft_pct),
+                    p.oreb, p.dreb, p.reb, numFmt(p.rpg),
+                    p.ast, p.stl, p.blk, p.to,
+                    p.fouls_drawn, p.pf,
+                    pctNum(p.efg), pctNum(p.ts),
+                    numFmt(p.pts_40), numFmt(p.reb_40)
+                ]);
+            });
+
+            const csvStr = arrayToCSV(rows, ";");
+            downloadFile(csvStr, `sbu_saisonstatistik_2026_27_${new Date().toISOString().slice(0,10)}.csv`, "text/csv;charset=utf-8;");
+        }
+
+        function downloadScheduleCSV() {
+            const rows = [
+                ["SpT", "Datum", "Heim_Auswaerts", "Gegner", "Halle_Spielort", "Punkte_SBU", "Punkte_Gegner", "Ergebnis", "Status"]
+            ];
+
+            state.schedule.forEach(s => {
+                const mD = state.matches[s.spt] || {};
+                const sbuSc = (mD.score_sbu !== null && mD.score_sbu !== undefined) ? mD.score_sbu : (s.sbu !== null ? s.sbu : "");
+                const oppSc = (mD.score_opp !== null && mD.score_opp !== undefined) ? mD.score_opp : (s.opp_score !== null ? s.opp_score : "");
+                let erg = "";
+                let stat = "Geplant";
+                if (sbuSc !== "" && oppSc !== "") {
+                    erg = `${sbuSc}:${oppSc}`;
+                    stat = sbuSc > oppSc ? "Sieg SBU" : (sbuSc < oppSc ? "Niederlage" : "Unentschieden");
+                }
+                rows.push([
+                    s.spt, s.date, s.ha, s.opp, s.venue, sbuSc, oppSc, erg, stat
+                ]);
+            });
+
+            const csvStr = arrayToCSV(rows, ";");
+            downloadFile(csvStr, `sbu_spielplan_2026_27_${new Date().toISOString().slice(0,10)}.csv`, "text/csv;charset=utf-8;");
+        }
+
 
 
 
