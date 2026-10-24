@@ -1,0 +1,14 @@
+[
+  { "id": "m2_evt_01", "type": "SHOT_MAKE", "pts": 2, "jersey": "20", "time_s": 48.0, "desc": "2P Treffer Paint (Roman Blank)", "conf": 0.91 },
+  { "id": "m2_evt_02", "type": "SHOT_MISS", "pts": 0, "jersey": "14", "time_s": 67.8, "desc": "2P Fehlwurf Midrange (Ralf Dubiel)", "conf": 0.84 },
+  { "id": "m2_evt_03", "type": "DEF_REBOUND", "pts": 0, "jersey": "14", "time_s": 72.0, "desc": "Defensivrebound (Ralf Dubiel)", "conf": 0.87 },
+  { "id": "m2_evt_04", "type": "TRAVELING", "pts": 0, "jersey": "26", "time_s": 125.0, "desc": "Schrittfehler Art. 25 (Helmut Schwebel)", "conf": 0.89 },
+  { "id": "m2_evt_05", "type": "STEAL", "pts": 0, "jersey": "26", "time_s": 152.0, "desc": "Steal / Deflection (Helmut Schwebel)", "conf": 0.86 },
+  { "id": "m2_evt_06", "type": "SHOT_MAKE", "pts": 3, "jersey": "20", "time_s": 204.8, "desc": "3P Treffer Right Wing (Roman Blank)", "conf": 0.95 },
+  { "id": "m2_evt_07", "type": "DEF_REBOUND", "pts": 0, "jersey": "14", "time_s": 260.4, "desc": "Defensivrebound (Ralf Dubiel)", "conf": 0.88 },
+  { "id": "m2_evt_08", "type": "SHOT_MISS", "pts": 0, "jersey": "66", "time_s": 274.2, "desc": "2P Fehlwurf (Dominik Krämer)", "conf": 0.82 },
+  { "id": "m2_evt_09", "type": "BLOCK", "pts": 0, "jersey": "20", "time_s": 670.1, "desc": "Korb-Block am Ring (Roman Blank)", "conf": 0.92 },
+  { "id": "m2_evt_10", "type": "DOUBLE_DRIBBLE", "pts": 0, "jersey": "66", "time_s": 858.0, "desc": "Zweimaliges Dribbeln Art. 24 (Dominik Krämer)", "conf": 0.87 },
+  { "id": "m2_evt_11", "type": "STEAL", "pts": 0, "jersey": "20", "time_s": 882.4, "desc": "Steal / Ballgewinn (Roman Blank)", "conf": 0.90 },
+  { "id": "m2_evt_12", "type": "SHOT_MAKE", "pts": 2, "jersey": "14", "time_s": 1005.4, "desc": "2P Treffer Layup (Ralf Dubiel)", "conf": 0.93 }
+]
