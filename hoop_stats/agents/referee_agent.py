@@ -113,6 +113,8 @@ class RefereeAgent(BaseAgent):
         closest_pid = None
         closest_dist = float('inf')
         for pid, pdata in players.items():
+            if pdata.get("team") == "Referee" or pdata.get("role") == "referee":
+                continue
             ppos = pdata.get("pos")
             if ppos:
                 dist = ((ball[0] - ppos[0])**2 + (ball[1] - ppos[1])**2)**0.5

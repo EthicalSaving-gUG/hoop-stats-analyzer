@@ -61,21 +61,32 @@ def get_dominant_jersey_color(frame, bbox):
         return "Unknown"
 
 
-def assign_teams_by_color(player_colors):
+def assign_teams_by_color(player_colors, referee_ids=None):
     """
     Given {player_id: color_name}, groups players into at most 2 teams.
+    Referees (either listed in referee_ids or with color 'Referee') are
+    explicitly isolated and assigned to 'Referee'.
     Returns {player_id: team_name}.
     """
     if not player_colors:
         return {}
 
-    # Count most common colors
-    color_counts = Counter(player_colors.values())
-    # Remove 'Unknown' and tiny outliers
-    clean = {c: n for c, n in color_counts.items() if c not in ("Unknown", "Mixed") and n > 0}
+    ref_set = set(referee_ids or [])
+
+    # Exclude referees from team color clustering
+    candidate_colors = {
+        pid: c for pid, c in player_colors.items()
+        if pid not in ref_set and c not in ("Referee", "Unknown", "Mixed")
+    }
+
+    color_counts = Counter(candidate_colors.values())
+    clean = {c: n for c, n in color_counts.items() if n > 0}
 
     if not clean:
-        return {pid: "Unknown" for pid in player_colors}
+        return {
+            pid: ("Referee" if pid in ref_set or player_colors[pid] == "Referee" else "Unknown")
+            for pid in player_colors
+        }
 
     sorted_colors = sorted(clean, key=clean.get, reverse=True)
     team_a_color = sorted_colors[0]
@@ -83,10 +94,30 @@ def assign_teams_by_color(player_colors):
 
     result = {}
     for pid, color in player_colors.items():
-        if color == team_a_color:
+        if pid in ref_set or color == "Referee":
+            result[pid] = "Referee"
+        elif color == team_a_color:
             result[pid] = f"Team {team_a_color}"
         elif color == team_b_color:
             result[pid] = f"Team {team_b_color}"
         else:
             result[pid] = "Other"
     return result
+
+def classify_person_referee_or_player(frame, bbox):
+    """
+    Convenience function to classify whether a detected person bounding box
+    corresponds to a referee (grey shirt, long black pants) or a player.
+    Returns: (is_referee: bool, details: dict)
+    """
+    from .referee_detector import RefereeDetector
+    detector = RefereeDetector()
+    res = detector.evaluate_person(frame, bbox=bbox)
+    return res.is_referee, {
+        "confidence": res.confidence,
+        "shirt_color": res.shirt_color,
+        "pants_type": res.pants_type,
+        "has_skin_on_legs": res.has_skin_on_legs,
+        "reasons": res.reasons
+    }
+

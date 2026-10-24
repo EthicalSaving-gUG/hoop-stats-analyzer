@@ -7,6 +7,7 @@ from .metrics import PlayerMetrics
 from .ocr import JerseyOCR
 from .exporter import DataExporter
 from .team_colors import get_dominant_jersey_color, assign_teams_by_color
+from .referee_detector import RefereeDetector
 from .shot_tracker import ShotTracker
 from .roi_tracker import MultiRoiTracker
 from .video_utils import get_video_info, get_segment_ranges, read_segment
@@ -23,6 +24,8 @@ class BasketballAnalyzer:
 
         self.player_metadata = {}      # {id: {"jersey": "...", "team": "..."}}
         self.player_colors   = {}      # {id: color_name} – raw dominant color
+        self.referee_ids     = set()   # {id} – identified referees
+        self.referee_detector = RefereeDetector()
         self.shot_tracker = None   # initialised after first frame
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -96,11 +99,18 @@ class BasketballAnalyzer:
                         if number:
                             self.player_metadata[obj_id]["jersey"] = number
 
-                    # ── Jersey color (sampled every 30 frames) ────────────
+                    # ── Jersey color & Referee detection (sampled every 30 frames) ──
                     if frame_idx % 30 == 0:
-                        color = get_dominant_jersey_color(frame, box)
-                        if color not in ("Unknown", "Mixed"):
-                            self.player_colors[obj_id] = color
+                        ref_check = self.referee_detector.evaluate_person(frame, bbox=box)
+                        if ref_check.is_referee:
+                            self.referee_ids.add(obj_id)
+                            self.player_colors[obj_id] = "Referee"
+                            self.player_metadata[obj_id]["team"] = "Referee"
+                            self.player_metadata[obj_id]["role"] = "referee"
+                        else:
+                            color = get_dominant_jersey_color(frame, box)
+                            if color not in ("Unknown", "Mixed"):
+                                self.player_colors[obj_id] = color
 
             # ── Ball / scoring detection ──────────────────────────────────
             balls = self.detector.detect_ball(frame)
@@ -124,8 +134,8 @@ class BasketballAnalyzer:
 
     # ─────────────────────────────────────────────────────────────────────────
     def _finalize_stats(self):
-        # Assign teams based on dominant jersey colors
-        team_assignments = assign_teams_by_color(self.player_colors)
+        # Assign teams based on dominant jersey colors (with referee isolation)
+        team_assignments = assign_teams_by_color(self.player_colors, referee_ids=self.referee_ids)
 
         final_data = {}
         for pid, stats in self.metrics.metrics.items():

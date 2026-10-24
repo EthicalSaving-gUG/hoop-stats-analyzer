@@ -16,3 +16,5 @@ from .primitives import (
     Point3D, Sphere3D, Cylinder3D, Ring3D, Rect3D,
 )
 from .camera3d import Camera3D, make_virtual_camera
+
+from .referee_detector import RefereeDetector, RefereeClassification
