@@ -1099,5 +1099,14 @@ async def get_ai_events():
             return json.load(f)
     return {"clips": []}
 
+@app.get("/api/swisstransfer-resolve")
+async def resolve_swisstransfer_endpoint(url: str):
+    try:
+        from hoop_stats.swisstransfer import resolve_swisstransfer_url
+        direct_url, meta = resolve_swisstransfer_url(url)
+        return {"status": "ok", "direct_url": direct_url, "meta": meta}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning", access_log=False)

@@ -1,0 +1,65 @@
+{
+    "team_name": "SB Uffenheim",
+    "summary": {
+        "points": 18,
+        "possessions": 26.4,
+        "pace": 26.4,
+        "ortg": 68.1,
+        "ts_pct": 40.1,
+        "efg_pct": 40.9,
+        "ast_to_ratio": 0.1
+    },
+    "four_factors": {
+        "efg_pct": 40.9,
+        "tov_pct": 37.8,
+        "orb_pct": 17.1,
+        "ft_rate": 0.045
+    },
+    "shot_splits": {
+        "fgm": 6,
+        "fga": 22,
+        "fg_pct": 27.3,
+        "fg2m": 0,
+        "fg2a": 1,
+        "fg2_pct": 0.0,
+        "fg3m": 6,
+        "fg3a": 21,
+        "fg3_pct": 28.6,
+        "three_point_attempt_rate": 95.5,
+        "ftm": 0,
+        "fta": 1,
+        "ft_pct": 0.0
+    },
+    "turnover_diagnosis": {
+        "total_turnovers": 10,
+        "traveling": 6,
+        "bad_pass": 0,
+        "three_seconds": 0,
+        "backcourt": 0,
+        "out_of_bounds": 3,
+        "double_dribble": 1,
+        "eight_seconds": 0,
+        "five_seconds": 0
+    },
+    "defense_and_hustle": {
+        "steals": 0,
+        "blocks": 0,
+        "dreb": 11,
+        "oreb": 6,
+        "reb": 17
+    },
+    "top_scorers": [
+        {
+            "jersey": "21",
+            "name": null,
+            "pts": 12,
+            "fgm": 4,
+            "fga": 13
+        }
+    ],
+    "coach_takeaways": [
+        "\u26a0\ufe0f Ausbauf\u00e4hige Wurfeffizienz: eFG% von 40.9% (3er: 28.6%, 2er: 0.0%).",
+        "\ud83d\udea8 Hohe Ballverlustrate: TOV% von 37.8% (10 Turnovers: 6 Schrittfehler, 0 Fehlp\u00e4sse).",
+        "\u26a0\ufe0f Ball-Movement verbesserungsf\u00e4hig: AST/TO Ratio liegt bei 0.1."
+    ]
+}

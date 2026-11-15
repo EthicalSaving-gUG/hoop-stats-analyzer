@@ -1,14 +1,344 @@
 [
-  { "id": "m2_evt_01", "type": "SHOT_MAKE", "pts": 2, "jersey": "20", "time_s": 48.0, "desc": "2P Treffer Paint (Roman Blank)", "conf": 0.91 },
-  { "id": "m2_evt_02", "type": "SHOT_MISS", "pts": 0, "jersey": "14", "time_s": 67.8, "desc": "2P Fehlwurf Midrange (Ralf Dubiel)", "conf": 0.84 },
-  { "id": "m2_evt_03", "type": "DEF_REBOUND", "pts": 0, "jersey": "14", "time_s": 72.0, "desc": "Defensivrebound (Ralf Dubiel)", "conf": 0.87 },
-  { "id": "m2_evt_04", "type": "TRAVELING", "pts": 0, "jersey": "26", "time_s": 125.0, "desc": "Schrittfehler Art. 25 (Helmut Schwebel)", "conf": 0.89 },
-  { "id": "m2_evt_05", "type": "STEAL", "pts": 0, "jersey": "26", "time_s": 152.0, "desc": "Steal / Deflection (Helmut Schwebel)", "conf": 0.86 },
-  { "id": "m2_evt_06", "type": "SHOT_MAKE", "pts": 3, "jersey": "20", "time_s": 204.8, "desc": "3P Treffer Right Wing (Roman Blank)", "conf": 0.95 },
-  { "id": "m2_evt_07", "type": "DEF_REBOUND", "pts": 0, "jersey": "14", "time_s": 260.4, "desc": "Defensivrebound (Ralf Dubiel)", "conf": 0.88 },
-  { "id": "m2_evt_08", "type": "SHOT_MISS", "pts": 0, "jersey": "66", "time_s": 274.2, "desc": "2P Fehlwurf (Dominik Krämer)", "conf": 0.82 },
-  { "id": "m2_evt_09", "type": "BLOCK", "pts": 0, "jersey": "20", "time_s": 670.1, "desc": "Korb-Block am Ring (Roman Blank)", "conf": 0.92 },
-  { "id": "m2_evt_10", "type": "DOUBLE_DRIBBLE", "pts": 0, "jersey": "66", "time_s": 858.0, "desc": "Zweimaliges Dribbeln Art. 24 (Dominik Krämer)", "conf": 0.87 },
-  { "id": "m2_evt_11", "type": "STEAL", "pts": 0, "jersey": "20", "time_s": 882.4, "desc": "Steal / Ballgewinn (Roman Blank)", "conf": 0.90 },
-  { "id": "m2_evt_12", "type": "SHOT_MAKE", "pts": 2, "jersey": "14", "time_s": 1005.4, "desc": "2P Treffer Layup (Ralf Dubiel)", "conf": 0.93 }
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 501.4,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1 (home): 3 Schritte nach Ballaufnahme (1519.91m)",
+    "conf": 0.88,
+    "id": "spt4_evt_01"
+  },
+  {
+    "type": "DOUBLE_DRIBBLE",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 510.9,
+    "desc": "Zweimaliges Dribbeln (Double Dribble, FIBA Art. 24) by Player 1 (home)",
+    "conf": 0.88,
+    "id": "spt4_evt_02"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 522.0,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_03"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 522.0,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1003 (home): 4 Schritte nach Ballaufnahme (1808.57m)",
+    "conf": 0.88,
+    "id": "spt4_evt_04"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 528.5,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1004 (home): 3 Schritte nach Ballaufnahme (1258.80m)",
+    "conf": 0.88,
+    "id": "spt4_evt_05"
+  },
+  {
+    "type": "PLAYER_OUT_OF_BOUNDS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 534.8,
+    "desc": "Ballführer im Aus (Player Out of Bounds) by Player 1000 (home) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_06"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 535.1,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_07"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 1529.9,
+    "desc": "3PT Missed (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_08"
+  },
+  {
+    "type": "SHOT_MAKE",
+    "pts": 3,
+    "jersey": "21",
+    "time_s": 1554.8,
+    "desc": "3PT Made (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_09"
+  },
+  {
+    "type": "ASSIST",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 1554.8,
+    "desc": "Vorlage (Assist) by Player 1001 (home) to Shooter 1000 (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_10"
+  },
+  {
+    "type": "SHOT_MAKE",
+    "pts": 3,
+    "jersey": "Unknown",
+    "time_s": 2846.33,
+    "desc": "3PT Made (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_11"
+  },
+  {
+    "type": "PLAYER_OUT_OF_BOUNDS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 2846.33,
+    "desc": "Ballführer im Aus (Player Out of Bounds) by Player 1000 (home) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_12"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2846.63,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_13"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2847.43,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_14"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2851.33,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_15"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 2860.73,
+    "desc": "2PT Missed (mid_range) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_16"
+  },
+  {
+    "type": "PLAYER_OUT_OF_BOUNDS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2860.93,
+    "desc": "Ballführer im Aus (Player Out of Bounds) by Player 1004 (home)",
+    "conf": 0.88,
+    "id": "spt4_evt_17"
+  },
+  {
+    "type": "SHOT_MAKE",
+    "pts": 3,
+    "jersey": "Unknown",
+    "time_s": 2861.83,
+    "desc": "3PT Made (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_18"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2869.83,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1006 (away): 3 Schritte nach Ballaufnahme (957.65m)",
+    "conf": 0.88,
+    "id": "spt4_evt_19"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2871.13,
+    "desc": "FT Missed (mid_range)",
+    "conf": 0.88,
+    "id": "spt4_evt_20"
+  },
+  {
+    "type": "PLAYER_OUT_OF_BOUNDS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2875.93,
+    "desc": "Ballführer im Aus (Player Out of Bounds) by Player 1002 (away)",
+    "conf": 0.88,
+    "id": "spt4_evt_21"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2877.53,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_22"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2877.63,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_23"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2879.43,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_24"
+  },
+  {
+    "type": "PLAYER_OUT_OF_BOUNDS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2897.23,
+    "desc": "Ballführer im Aus (Player Out of Bounds) by Player 1006 (away)",
+    "conf": 0.88,
+    "id": "spt4_evt_25"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 2897.33,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_26"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 4177.17,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_27"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 4194.87,
+    "desc": "3PT Missed (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_28"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "Unknown",
+    "time_s": 4196.17,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1002 (away): 3 Schritte nach Ballaufnahme (1168.81m)",
+    "conf": 0.88,
+    "id": "spt4_evt_29"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 4201.27,
+    "desc": "3PT Missed (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_30"
+  },
+  {
+    "type": "SHOT_MAKE",
+    "pts": 3,
+    "jersey": "Unknown",
+    "time_s": 4223.37,
+    "desc": "3PT Made (above_the_break_three)",
+    "conf": 0.88,
+    "id": "spt4_evt_31"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 5176.67,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1000 (home): 3 Schritte nach Ballaufnahme (1472.15m) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_32"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 5194.17,
+    "desc": "3PT Missed (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_33"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 5194.17,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1001 (home): 3 Schritte nach Ballaufnahme (1260.48m) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_34"
+  },
+  {
+    "type": "SHOT_MAKE",
+    "pts": 3,
+    "jersey": "21",
+    "time_s": 5201.57,
+    "desc": "3PT Made (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_35"
+  },
+  {
+    "type": "TRAVELING",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 5205.67,
+    "desc": "Schrittfehler (Traveling, FIBA Art. 25) by Player 1000 (home): 3 Schritte nach Ballaufnahme (2234.56m) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_36"
+  },
+  {
+    "type": "SHOT_MAKE",
+    "pts": 3,
+    "jersey": "21",
+    "time_s": 5206.17,
+    "desc": "3PT Made (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_37"
+  },
+  {
+    "type": "SHOT_MISS",
+    "pts": 0,
+    "jersey": "21",
+    "time_s": 5222.77,
+    "desc": "3PT Missed (above_the_break_three) (Dominik Schäfer)",
+    "conf": 0.88,
+    "id": "spt4_evt_38"
+  }
 ]
