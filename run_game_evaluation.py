@@ -44,7 +44,17 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
     print(f"Ground Truth Team: SB Uffenheim (55 Pkt) vs. SG Oerlenbach (49 Pkt)")
     print(f"=================================================================\n")
 
-    if not os.path.exists(video_path):
+    if "swisstransfer.com/dl/" in video_path:
+        from hoop_stats.swisstransfer import resolve_swisstransfer_url
+        print(f"[SwissTransfer] Resolving link: {video_path}...")
+        resolved_url, meta = resolve_swisstransfer_url(video_path)
+        if resolved_url:
+            print(f"[SwissTransfer] Resolved to direct stream URL ({meta.get('filename')}, {meta.get('size_gb')} GB)")
+            video_path = resolved_url
+        else:
+            print(f"[SwissTransfer] Warning: Failed to resolve direct stream URL.")
+
+    if not video_path.startswith(("http://", "https://")) and not os.path.exists(video_path):
         print(f"Error: Video file not found: {video_path}")
         return None
 
@@ -191,10 +201,13 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
                         col = get_dominant_jersey_color(frame, box)
                         if col not in ("Unknown", "Mixed"):
                             player_colors[obj_id] = col
-                            if col in ("Black", "Dark"):
-                                player_teams[str(obj_id)] = "home"  # Uffenheim
-                            elif col in ("White", "Light", "Blue"):
-                                player_teams[str(obj_id)] = "away"  # Oerlenbach
+                            if col in ("Yellow", "Gold"):
+                                player_teams[str(obj_id)] = "home"  # Uffenheim Yellow
+                            elif col in ("White", "Light", "Blue", "Red"):
+                                player_teams[str(obj_id)] = "away"  # Opponent
+                            elif col in ("Black", "Dark"):
+                                has_yellow = any(c in ("Yellow", "Gold") for c in player_colors.values())
+                                player_teams[str(obj_id)] = "away" if has_yellow else "home"
 
                     p_team = player_teams.get(str(obj_id), "home")
                     player_registry.register_track(obj_id, team=p_team)

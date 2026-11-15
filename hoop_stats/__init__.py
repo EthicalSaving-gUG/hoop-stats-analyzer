@@ -18,3 +18,4 @@ from .primitives import (
 from .camera3d import Camera3D, make_virtual_camera
 
 from .referee_detector import RefereeDetector, RefereeClassification
+from .swisstransfer import resolve_swisstransfer_url

@@ -122,8 +122,15 @@ class StatClipRegistry:
     def export_manifest(self, output_path: str):
         """Exports JSON clip manifest."""
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        def _json_default(o):
+            if hasattr(o, "item"):
+                return o.item()
+            if hasattr(o, "tolist"):
+                return o.tolist()
+            return str(o)
+
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump({"total_clips": len(self.clips), "clips": self.to_manifest()}, f, indent=2)
+            json.dump({"total_clips": len(self.clips), "clips": self.to_manifest()}, f, indent=2, default=_json_default)
 
     def extract_clips(self, video_path: str, output_dir: str, max_clips: Optional[int] = None) -> List[str]:
         """
