@@ -1112,10 +1112,11 @@
     <script>
         // 1. DEFAULT ROSTER (Fest hinterlegte Standard-Spielerliste)
         const DEFAULT_ROSTER = [
-            { jersey: "4", name: "Rainer Dehner" },
             { jersey: "7", name: "Paul Kevin Krämer-Moore" },
             { jersey: "11", name: "Pierre Reichl" },
             { jersey: "14", name: "Ralf Dubiel" },
+            { jersey: "15", name: "Rainer Dehner" },
+            { jersey: "18", name: "Amir Puljic" },
             { jersey: "20", name: "Roman Blank" },
             { jersey: "21", name: "Dominik Schäfer" },
             { jersey: "26", name: "Helmut Schwebel" },
@@ -1129,7 +1130,7 @@
             { spt: 1, date: "11.10.2026", ha: "Heim", opp: "SV Kürnach BasketWalls", sbu: 57, opp_score: 50, has_app_data: true, venue: "Christian-von-Bomhard-Schule" },
             { spt: 2, date: "17.10.2026", ha: "Ausw.", opp: "SG Oerlenbach/Ebenhausen 2", sbu: 55, opp_score: 49, has_app_data: true, venue: "Wilhelm-Hegler-Halle" },
             { spt: 3, date: "25.10.2026", ha: "Heim", opp: "TB Arnstein 2", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
-            { spt: 4, date: "14.11.2026", ha: "Ausw.", opp: "TSV Brendlorenzen", sbu: null, opp_score: null, has_app_data: false, venue: "Gymnasium" },
+            { spt: 4, date: "14.11.2026", ha: "Ausw.", opp: "TSV Brendlorenzen", sbu: 67, opp_score: 69, has_app_data: true, venue: "Gymnasium Bad Neustadt" },
             { spt: 5, date: "22.11.2026", ha: "Heim", opp: "TG Kitzingen", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
             { spt: 6, date: "06.12.2026", ha: "Heim", opp: "TSV Grombühl 2", sbu: null, opp_score: null, has_app_data: false, venue: "Christian-von-Bomhard-Schule" },
             { spt: 7, date: "11.12.2026", ha: "Ausw.", opp: "SF Waschküch Würzburg", sbu: null, opp_score: null, has_app_data: false, venue: "Riemenschneider Gymnasium" },
@@ -1245,7 +1246,31 @@
                 protocol: []
             };
 
-            for (let i = 3; i <= 14; i++) {
+            // Match 4 (14.11.2026 TSV Brendlorenzen vs. SB Uffenheim 69 : 67 n.V.)
+            state.matches[4] = {
+                mode: 'variante_a',
+                score_sbu: 67,
+                score_opp: 69,
+                video_url: 'https://www.swisstransfer.com/dl/01a1dbe6-1d8b-73f7-a03c-05fe50a667e3',
+                sums: {
+                    "7": { played: true, "2T": 2, "2V": 7, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 1, "DR": 1, "AS": 1, "ST": 1, "BL": 0, "TO": 1, "FZ": 0, "OF": 0, min: "33:06", pf: 2, pm: 5 },
+                    "11": { played: true, "2T": 1, "2V": 0, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 1, "ST": 0, "BL": 0, "TO": 2, "FZ": 0, "OF": 0, min: "07:17", pf: 3, pm: -4 },
+                    "14": { played: true, "2T": 2, "2V": 1, "3T": 0, "3V": 0, "FT": 3, "FTA": 4, "FV": 1, "OR": 0, "DR": 1, "AS": 1, "ST": 1, "BL": 0, "TO": 2, "FZ": 1, "OF": 0, min: "14:52", pf: 4, pm: -2 },
+                    "15": { played: false, "2T": 0, "2V": 0, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0, min: "00:00", pf: 0, pm: 0 },
+                    "18": { played: false, "2T": 0, "2V": 0, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0, min: "00:00", pf: 0, pm: 0 },
+                    "20": { played: true, "2T": 3, "2V": 5, "3T": 1, "3V": 2, "FT": 7, "FTA": 10, "FV": 3, "OR": 3, "DR": 3, "AS": 3, "ST": 1, "BL": 2, "TO": 4, "FZ": 5, "OF": 1, min: "44:15", pf: 1, pm: -2 },
+                    "21": { played: true, "2T": 4, "2V": 3, "3T": 6, "3V": 6, "FT": 2, "FTA": 5, "FV": 3, "OR": 3, "DR": 17, "AS": 0, "ST": 1, "BL": 1, "TO": 4, "FZ": 5, "OF": 0, min: "45:00", pf: 4, pm: -2 },
+                    "26": { played: true, "2T": 0, "2V": 1, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 1, min: "02:40", pf: 0, pm: -6 },
+                    "33": { played: false, "2T": 0, "2V": 0, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0, min: "00:00", pf: 0, pm: 0 },
+                    "35": { played: true, "2T": 0, "2V": 0, "3T": 0, "3V": 3, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 8, "AS": 7, "ST": 0, "BL": 0, "TO": 6, "FZ": 1, "OF": 1, min: "41:42", pf: 2, pm: -1 },
+                    "66": { played: false, "2T": 0, "2V": 0, "3T": 0, "3V": 0, "FT": 0, "FTA": 0, "FV": 0, "OR": 0, "DR": 0, "AS": 0, "ST": 0, "BL": 0, "TO": 0, "FZ": 0, "OF": 0, min: "00:00", pf: 0, pm: 0 },
+                    "91": { played: true, "2T": 2, "2V": 9, "3T": 2, "3V": 12, "FT": 0, "FTA": 0, "FV": 0, "OR": 1, "DR": 5, "AS": 1, "ST": 1, "BL": 2, "TO": 6, "FZ": 1, "OF": 0, min: "36:08", pf: 2, pm: 2 }
+                },
+                protocol: []
+            };
+
+            state.matches[3] = { mode: 'variante_b', score_sbu: null, score_opp: null, sums: {}, protocol: [] };
+            for (let i = 5; i <= 14; i++) {
                 state.matches[i] = { mode: 'variante_b', score_sbu: null, score_opp: null, sums: {}, protocol: [] };
             }
         }

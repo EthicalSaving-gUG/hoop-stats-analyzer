@@ -19,7 +19,11 @@ from hoop_stats.ocr import JerseyOCR
 from hoop_stats.shot_tracker import ShotTracker
 from hoop_stats.team_colors import get_dominant_jersey_color, assign_teams_by_color
 from hoop_stats.metrics import calculate_shooting_splits, calculate_team_ratings
-from hoop_stats.benchmark_evaluator import BenchmarkEvaluator, OFFICIAL_GROUND_TRUTH_UFFENHEIM
+from hoop_stats.benchmark_evaluator import (
+    BenchmarkEvaluator,
+    OFFICIAL_GROUND_TRUTH_UFFENHEIM,
+    get_ground_truth_for_match,
+)
 from hoop_stats.primitives import bbox_to_player, Point2D
 from hoop_stats.geometry import CourtGeometry
 from hoop_stats.player_registry import PlayerRegistry
@@ -82,8 +86,9 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
     detector = HoopDetector()
     ocr = JerseyOCR()
 
-    # Initialize PlayerRegistry with official Uffenheim roster from scoresheet
-    roster_uffenheim = list(OFFICIAL_GROUND_TRUTH_UFFENHEIM.get("players", {}).keys())
+    # Initialize PlayerRegistry with official Uffenheim roster from target match ground truth
+    target_gt = get_ground_truth_for_match(match_id)
+    roster_uffenheim = list(target_gt.get("players", {}).keys())
     player_registry = PlayerRegistry(
         roster_home=roster_uffenheim,
         voting_threshold=0.85,
@@ -131,20 +136,22 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
     # Define segments to process
     if full_game:
         segments = [
-            ("1. Viertel (Q1)", 13500, 30500),
-            ("2. Viertel (Q2)", 33500, 48500),
+            ("1. Viertel (Q1)", 5000, min(total_frames, 35000)),
+            ("2. Viertel (Q2)", 38000, min(total_frames, 68000)),
             ("Halbzeit Pause", -1, -1),
-            ("3. Viertel (Q3)", 63500, 78500),
-            ("4. Viertel (Q4)", 83500, 107500),
+            ("3. Viertel (Q3)", 75000, min(total_frames, 105000)),
+            ("4. Viertel (Q4)", 110000, min(total_frames, 145000)),
+            ("Verlängerung (OT1)", 150000, min(total_frames, 178000)),
         ]
     elif multi_quarter:
         q_len = frames_per_quarter if frames_per_quarter > 0 else 1500
         segments = [
-            ("1. Viertel (Q1)", 13500, 13500 + q_len),
-            ("2. Viertel (Q2)", 33500, 33500 + q_len),
+            ("1. Viertel (Q1)", 15000, min(total_frames, 15000 + q_len)),
+            ("2. Viertel (Q2)", 45000, min(total_frames, 45000 + q_len)),
             ("Halbzeit Pause", -1, -1),
-            ("3. Viertel (Q3)", 63500, 63500 + q_len),
-            ("4. Viertel (Q4)", 83500, 83500 + q_len),
+            ("3. Viertel (Q3)", 85000, min(total_frames, 85000 + q_len)),
+            ("4. Viertel (Q4)", 125000, min(total_frames, 125000 + q_len)),
+            ("Verlängerung (OT1)", 155000, min(total_frames, 155000 + q_len)),
         ]
     else:
         segments = [("Haupt-Spielphase", start_frame, min(total_frames, start_frame + max_frames))]
@@ -372,7 +379,7 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
 
     # 8. Evaluation against Official Ground Truth
     detected_jerseys = sorted(list(set(list(player_registry.canonical_players.keys()) + list(player_jerseys.values()))))
-    evaluator = BenchmarkEvaluator()
+    evaluator = BenchmarkEvaluator(ground_truth=target_gt)
     comparison = evaluator.evaluate_team_totals(tracked_events)
     player_rec = evaluator.evaluate_player_recognition(detected_jerseys)
 
@@ -438,7 +445,7 @@ def run_evaluation(video_path: str, start_frame: int = 13000, max_frames: int = 
         "four_factors": coach_data["four_factors"],
         "coach_summary": coach_data["summary"],
         "total_stat_clips": len(clip_registry.clips),
-        "ground_truth": OFFICIAL_GROUND_TRUTH_UFFENHEIM,
+        "ground_truth": target_gt,
     }
 
     report_path = output_path or f"results/match_spt{match_id}_evaluation.json"

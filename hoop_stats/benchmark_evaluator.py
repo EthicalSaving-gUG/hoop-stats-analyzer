@@ -132,13 +132,209 @@ OFFICIAL_GROUND_TRUTH_UFFENHEIM = {
 }
 
 
+# Official Ground Truth data for SB Uffenheim (Spieltag 4: TSV Brendlorenzen vs. SB Uffenheim 69 : 67 n.V.)
+OFFICIAL_GROUND_TRUTH_BRENDLORENZEN = {
+    "team": "SB Uffenheim",
+    "opponent": "TSV Brendlorenzen",
+    "final_score": {"uffenheim": 67, "brendlorenzen": 69},
+    "quarter_scores": {
+        "Q1": [17, 21],
+        "Q2": [17, 13],
+        "Q3": [14, 12],
+        "Q4": [12, 14],
+        "OT1": [7, 9],
+    },
+    "team_totals": {
+        "points": 67,
+        "fgm": 23,
+        "fga": 72,
+        "fg_pct": 0.319,
+        "fg2m": 14,
+        "fg2a": 40,
+        "fg2_pct": 0.350,
+        "fg3m": 9,
+        "fg3a": 32,
+        "fg3_pct": 0.281,
+        "ftm": 12,
+        "fta": 19,
+        "ft_pct": 0.632,
+        "efg_pct": 0.382,
+        "ts_pct": 0.417,
+        "oreb": 8,
+        "dreb": 35,
+        "reb": 43,
+        "assists": 14,
+        "steals": 5,
+        "blocks": 5,
+        "turnovers": 25,
+        "turnovers_traveling": 7,
+        "turnovers_bad_pass": 12,
+        "fouls_drawn": 16,
+        "personal_fouls": 18,
+        "plus_minus": -2,
+    },
+    "players": {
+        "7": {
+            "name": "Paul Kevin Krämer-Moore",
+            "minutes": "33:06",
+            "points": 4,
+            "fgm": 2, "fga": 9, "fg_pct": 0.22,
+            "fg2m": 2, "fg2a": 9, "fg2_pct": 0.22,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.00,
+            "ftm": 0, "fta": 0, "ft_pct": 0.00,
+            "oreb": 1, "dreb": 1, "reb": 2,
+            "assists": 1, "steals": 1, "blocks": 0, "turnovers": 1,
+            "fouls_drawn": 0, "personal_fouls": 2, "plus_minus": 5,
+        },
+        "11": {
+            "name": "Pierre Reichl",
+            "minutes": "07:17",
+            "points": 2,
+            "fgm": 1, "fga": 1, "fg_pct": 1.00,
+            "fg2m": 1, "fg2a": 1, "fg2_pct": 1.00,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.00,
+            "ftm": 0, "fta": 0, "ft_pct": 0.00,
+            "oreb": 0, "dreb": 0, "reb": 0,
+            "assists": 1, "steals": 0, "blocks": 0, "turnovers": 2,
+            "fouls_drawn": 0, "personal_fouls": 3, "plus_minus": -4,
+        },
+        "14": {
+            "name": "Ralf Dubiel",
+            "minutes": "14:52",
+            "points": 7,
+            "fgm": 2, "fga": 3, "fg_pct": 0.67,
+            "fg2m": 2, "fg2a": 3, "fg2_pct": 0.67,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.00,
+            "ftm": 3, "fta": 4, "ft_pct": 0.75,
+            "oreb": 0, "dreb": 1, "reb": 1,
+            "assists": 1, "steals": 1, "blocks": 0, "turnovers": 2,
+            "fouls_drawn": 1, "personal_fouls": 4, "plus_minus": -2,
+        },
+        "15": {
+            "name": "Rainer Dehner",
+            "minutes": "00:00",
+            "points": 0,
+            "fgm": 0, "fga": 0, "fg_pct": 0.0,
+            "fg2m": 0, "fg2a": 0, "fg2_pct": 0.0,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.0,
+            "ftm": 0, "fta": 0, "ft_pct": 0.0,
+            "oreb": 0, "dreb": 0, "reb": 0,
+            "assists": 0, "steals": 0, "blocks": 0, "turnovers": 0,
+            "fouls_drawn": 0, "personal_fouls": 0, "plus_minus": 0,
+        },
+        "18": {
+            "name": "Amir Puljic",
+            "minutes": "00:00",
+            "points": 0,
+            "fgm": 0, "fga": 0, "fg_pct": 0.0,
+            "fg2m": 0, "fg2a": 0, "fg2_pct": 0.0,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.0,
+            "ftm": 0, "fta": 0, "ft_pct": 0.0,
+            "oreb": 0, "dreb": 0, "reb": 0,
+            "assists": 0, "steals": 0, "blocks": 0, "turnovers": 0,
+            "fouls_drawn": 0, "personal_fouls": 0, "plus_minus": 0,
+        },
+        "20": {
+            "name": "Roman Blank",
+            "minutes": "44:15",
+            "points": 16,
+            "fgm": 4, "fga": 11, "fg_pct": 0.36,
+            "fg2m": 3, "fg2a": 8, "fg2_pct": 0.38,
+            "fg3m": 1, "fg3a": 3, "fg3_pct": 0.33,
+            "ftm": 7, "fta": 10, "ft_pct": 0.70,
+            "oreb": 3, "dreb": 3, "reb": 6,
+            "assists": 3, "steals": 1, "blocks": 2, "turnovers": 4,
+            "fouls_drawn": 6, "personal_fouls": 1, "plus_minus": -2,
+        },
+        "21": {
+            "name": "Dominik Schäfer",
+            "minutes": "45:00",
+            "points": 28,
+            "fgm": 10, "fga": 19, "fg_pct": 0.53,
+            "fg2m": 4, "fg2a": 7, "fg2_pct": 0.57,
+            "fg3m": 6, "fg3a": 12, "fg3_pct": 0.50,
+            "ftm": 2, "fta": 5, "ft_pct": 0.40,
+            "oreb": 3, "dreb": 17, "reb": 20,
+            "assists": 0, "steals": 1, "blocks": 1, "turnovers": 4,
+            "fouls_drawn": 5, "personal_fouls": 4, "plus_minus": -2,
+        },
+        "26": {
+            "name": "Helmut Schwebel",
+            "minutes": "02:40",
+            "points": 0,
+            "fgm": 0, "fga": 1, "fg_pct": 0.00,
+            "fg2m": 0, "fg2a": 1, "fg2_pct": 0.00,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.00,
+            "ftm": 0, "fta": 0, "ft_pct": 0.00,
+            "oreb": 0, "dreb": 0, "reb": 0,
+            "assists": 0, "steals": 0, "blocks": 0, "turnovers": 0,
+            "fouls_drawn": 1, "personal_fouls": 0, "plus_minus": -6,
+        },
+        "33": {
+            "name": "Fabian Temme",
+            "minutes": "00:00",
+            "points": 0,
+            "fgm": 0, "fga": 0, "fg_pct": 0.0,
+            "fg2m": 0, "fg2a": 0, "fg2_pct": 0.0,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.0,
+            "ftm": 0, "fta": 0, "ft_pct": 0.0,
+            "oreb": 0, "dreb": 0, "reb": 0,
+            "assists": 0, "steals": 0, "blocks": 0, "turnovers": 0,
+            "fouls_drawn": 0, "personal_fouls": 0, "plus_minus": 0,
+        },
+        "35": {
+            "name": "Christian Drumm",
+            "minutes": "41:42",
+            "points": 0,
+            "fgm": 0, "fga": 3, "fg_pct": 0.00,
+            "fg2m": 0, "fg2a": 0, "fg2_pct": 0.00,
+            "fg3m": 0, "fg3a": 3, "fg3_pct": 0.00,
+            "ftm": 0, "fta": 0, "ft_pct": 0.00,
+            "oreb": 0, "dreb": 8, "reb": 8,
+            "assists": 7, "steals": 0, "blocks": 0, "turnovers": 6,
+            "fouls_drawn": 2, "personal_fouls": 2, "plus_minus": -1,
+        },
+        "66": {
+            "name": "Dominik Krämer",
+            "minutes": "00:00",
+            "points": 0,
+            "fgm": 0, "fga": 0, "fg_pct": 0.0,
+            "fg2m": 0, "fg2a": 0, "fg2_pct": 0.0,
+            "fg3m": 0, "fg3a": 0, "fg3_pct": 0.0,
+            "ftm": 0, "fta": 0, "ft_pct": 0.0,
+            "oreb": 0, "dreb": 0, "reb": 0,
+            "assists": 0, "steals": 0, "blocks": 0, "turnovers": 0,
+            "fouls_drawn": 0, "personal_fouls": 0, "plus_minus": 0,
+        },
+        "91": {
+            "name": "Arthur Apinyan",
+            "minutes": "36:08",
+            "points": 10,
+            "fgm": 4, "fga": 25, "fg_pct": 0.16,
+            "fg2m": 2, "fg2a": 11, "fg2_pct": 0.18,
+            "fg3m": 2, "fg3a": 14, "fg3_pct": 0.14,
+            "ftm": 0, "fta": 0, "ft_pct": 0.00,
+            "oreb": 1, "dreb": 5, "reb": 6,
+            "assists": 1, "steals": 1, "blocks": 2, "turnovers": 6,
+            "fouls_drawn": 1, "personal_fouls": 2, "plus_minus": 2,
+        },
+    },
+}
+
+
+def get_ground_truth_for_match(match_id: int = 2) -> dict:
+    if match_id == 4:
+        return OFFICIAL_GROUND_TRUTH_BRENDLORENZEN
+    return OFFICIAL_GROUND_TRUTH_UFFENHEIM
+
+
 class BenchmarkEvaluator:
     """
     Compares detected match metrics against official Ground Truth.
     """
 
-    def __init__(self, ground_truth: dict = None):
-        self.gt = ground_truth or OFFICIAL_GROUND_TRUTH_UFFENHEIM
+    def __init__(self, ground_truth: dict = None, match_id: int = 2):
+        self.gt = ground_truth or get_ground_truth_for_match(match_id)
 
     def evaluate_team_totals(self, detected_totals: dict) -> dict:
         """
